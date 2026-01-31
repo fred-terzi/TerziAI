@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import type {
   ChatMessage,
   LLMStatus,
@@ -30,7 +30,16 @@ const DEMO_RESPONSES = [
  * Supports both GPU-accelerated and demo mode
  */
 export function useWebLLM(config: Partial<ChatConfig> = {}) {
-  const fullConfig: ChatConfig = { ...DEFAULT_CHAT_CONFIG, ...config };
+  // Memoize the full config to avoid unnecessary re-renders
+  const fullConfig: ChatConfig = useMemo(() => {
+    return {
+      modelId: config.modelId ?? DEFAULT_CHAT_CONFIG.modelId,
+      systemPrompt: config.systemPrompt ?? DEFAULT_CHAT_CONFIG.systemPrompt,
+      maxTokens: config.maxTokens ?? DEFAULT_CHAT_CONFIG.maxTokens,
+      temperature: config.temperature ?? DEFAULT_CHAT_CONFIG.temperature,
+    };
+  }, [config.modelId, config.systemPrompt, config.maxTokens, config.temperature]);
+
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [status, setStatus] = useState<LLMStatus>('idle');
   const [mode, setMode] = useState<EngineMode | null>(null);

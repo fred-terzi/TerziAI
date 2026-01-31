@@ -65,19 +65,19 @@ export const AVAILABLE_MODELS: ModelInfo[] = [
     lowResource: true,
   },
   {
-    id: 'Phi-3.5-mini-instruct-q4f16_1-MLC-1k',
-    name: 'Phi 3.5 Mini',
-    size: 'medium',
-    vramMB: 2520.07,
-    description: 'High-quality medium model from Microsoft',
-    lowResource: true,
-  },
-  {
     id: 'Qwen2.5-3B-Instruct-q4f16_1-MLC',
     name: 'Qwen 2.5 3B',
     size: 'medium',
     vramMB: 2504.76,
     description: 'Excellent medium-sized model for most tasks',
+    lowResource: true,
+  },
+  {
+    id: 'Phi-3.5-mini-instruct-q4f16_1-MLC-1k',
+    name: 'Phi 3.5 Mini',
+    size: 'medium',
+    vramMB: 2520.07,
+    description: 'High-quality medium model from Microsoft',
     lowResource: true,
   },
   {
