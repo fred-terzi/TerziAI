@@ -88,7 +88,6 @@ function App() {
             <ModelSelector
               selectedModelId={selectedModelId}
               onModelSelect={handleModelSelect}
-              disabled={false}
             />
             <button className="start-button" onClick={initializeEngine} data-testid="start-button">
               Load AI Model

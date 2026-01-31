@@ -85,7 +85,7 @@ export function ModelSelector({ selectedModelId, onModelSelect, disabled }: Mode
             {recommendedModelId && selectedModelId !== recommendedModelId && (
               <button
                 className="use-recommended-button"
-                onClick={() => recommendedModelId && onModelSelect(recommendedModelId)}
+                onClick={() => onModelSelect(recommendedModelId)}
                 disabled={disabled}
                 data-testid="use-recommended-button"
               >
@@ -98,5 +98,3 @@ export function ModelSelector({ selectedModelId, onModelSelect, disabled }: Mode
     </div>
   );
 }
-
-export default ModelSelector;

@@ -130,7 +130,10 @@ export async function estimateAvailableVRAM(): Promise<number> {
 
     // WebGPU doesn't expose VRAM directly, so we use conservative estimates
     // based on common GPU configurations and device memory
-    const deviceMemory = (navigator as { deviceMemory?: number }).deviceMemory;
+    const deviceMemory =
+      'deviceMemory' in navigator && typeof navigator.deviceMemory === 'number'
+        ? navigator.deviceMemory
+        : undefined;
 
     if (deviceMemory) {
       // If device memory API is available, estimate VRAM
@@ -171,21 +174,4 @@ export async function recommendModel(): Promise<ModelInfo> {
 
   // Return the largest compatible model
   return compatibleModels[compatibleModels.length - 1];
-}
-
-/**
- * Get recommended model description
- */
-export function getRecommendedModelDescription(availableVRAM: number): string {
-  const safeVRAM = availableVRAM * 0.8;
-
-  if (safeVRAM < 1000) {
-    return 'Low resources detected - recommended: SmolLM2-360M';
-  } else if (safeVRAM < 2000) {
-    return 'Moderate resources - recommended: Llama 3.2 1B or Qwen 2.5 1.5B';
-  } else if (safeVRAM < 4000) {
-    return 'Good resources - recommended: Llama 3.2 3B or Qwen 2.5 3B';
-  } else {
-    return 'Great resources - recommended: Llama 3.1 8B or Qwen 2.5 7B';
-  }
 }

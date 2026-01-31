@@ -4,7 +4,6 @@ import {
   getModelById,
   estimateAvailableVRAM,
   recommendModel,
-  getRecommendedModelDescription,
 } from './models';
 
 describe('models utility', () => {
@@ -120,32 +119,6 @@ describe('models utility', () => {
 
       const model = await recommendModel();
       expect(model.vramMB).toBeLessThanOrEqual(4000 * 0.8);
-    });
-  });
-
-  describe('getRecommendedModelDescription', () => {
-    it('should return appropriate description for low VRAM', () => {
-      const desc = getRecommendedModelDescription(500);
-      expect(desc).toContain('Low resources');
-      expect(desc).toContain('SmolLM2-360M');
-    });
-
-    it('should return appropriate description for moderate VRAM', () => {
-      const desc = getRecommendedModelDescription(1500);
-      expect(desc).toContain('Moderate resources');
-      expect(desc).toContain('Llama 3.2 1B');
-    });
-
-    it('should return appropriate description for good VRAM', () => {
-      const desc = getRecommendedModelDescription(3000);
-      expect(desc).toContain('Good resources');
-      expect(desc).toContain('3B');
-    });
-
-    it('should return appropriate description for great VRAM', () => {
-      const desc = getRecommendedModelDescription(6000);
-      expect(desc).toContain('Great resources');
-      expect(desc).toContain('8B');
     });
   });
 });
