@@ -85,10 +85,7 @@ function App() {
               Run AI models locally in your browser. Your conversations stay private and work
               offline.
             </p>
-            <ModelSelector
-              selectedModelId={selectedModelId}
-              onModelSelect={handleModelSelect}
-            />
+            <ModelSelector selectedModelId={selectedModelId} onModelSelect={handleModelSelect} />
             <button className="start-button" onClick={initializeEngine} data-testid="start-button">
               Load AI Model
             </button>
