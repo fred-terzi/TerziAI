@@ -26,6 +26,13 @@ const DEMO_RESPONSES = [
 ];
 
 /**
+ * Format VRAM from MB to GB for display
+ */
+function formatVRAMToGB(vramMB: number): string {
+  return (Math.round((vramMB / 1024) * 10) / 10).toString();
+}
+
+/**
  * Custom hook for managing WebLLM chat interactions
  * Provides state management for chat messages and LLM operations
  * Supports both GPU-accelerated and demo mode
@@ -146,12 +153,13 @@ export function useWebLLM(config: Partial<ChatConfig> = {}) {
         const nextSmaller = getNextSmallerModel(fullConfig.modelId);
         const smallestModel = getSmallestModel();
         const currentModel = getModelById(fullConfig.modelId);
+        const currentModelName = currentModel?.name || 'Selected model';
 
         if (nextSmaller) {
           setSuggestedModelId(nextSmaller.id);
           setError(
-            `Model "${currentModel?.name}" is too large for your device. ` +
-              `Try "${nextSmaller.name}" instead (requires ${Math.round((nextSmaller.vramMB / 1024) * 10) / 10}GB). ` +
+            `Model "${currentModelName}" is too large for your device. ` +
+              `Try "${nextSmaller.name}" instead (requires ${formatVRAMToGB(nextSmaller.vramMB)}GB). ` +
               `The smallest model "${smallestModel.name}" works on most devices.`
           );
         } else {
