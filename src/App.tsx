@@ -47,10 +47,10 @@ function App() {
   );
 
   const handleModelSelect = useCallback(
-    (modelId: string) => {
+    async (modelId: string) => {
       setSelectedModelId(modelId);
       // Reset the engine when changing models
-      reset();
+      await reset();
     },
     [reset]
   );
@@ -66,9 +66,9 @@ function App() {
     setMenuOpen(false);
   }, []);
 
-  const handleClearCache = useCallback(() => {
+  const handleClearCache = useCallback(async () => {
     // Reset the engine when cache is cleared
-    reset();
+    await reset();
   }, [reset]);
 
   const handleClearHistory = useCallback(() => {

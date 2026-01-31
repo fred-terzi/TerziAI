@@ -181,16 +181,23 @@ export const AVAILABLE_MODELS: ModelInfo[] = [
 /**
  * Get models available for the current GPU capabilities
  * @param supportsShaderF16 Whether the GPU supports shader-f16
+ * @param limitForMobile Whether to limit models for mobile devices (defaults to false)
  * @returns Array of compatible models
  */
-export function getAvailableModels(supportsShaderF16: boolean): ModelInfo[] {
-  if (supportsShaderF16) {
-    // If shader-f16 is supported, return all models
-    return AVAILABLE_MODELS;
-  } else {
-    // If shader-f16 is NOT supported, only return f32 models
-    return AVAILABLE_MODELS.filter((m) => m.shaderType === 'f32');
+export function getAvailableModels(
+  supportsShaderF16: boolean,
+  limitForMobile: boolean = false
+): ModelInfo[] {
+  let models = supportsShaderF16
+    ? AVAILABLE_MODELS
+    : AVAILABLE_MODELS.filter((m) => m.shaderType === 'f32');
+
+  // On mobile devices, limit to the 3 smallest models to prevent memory issues
+  if (limitForMobile) {
+    models = models.slice(0, 3);
   }
+
+  return models;
 }
 
 /**
@@ -244,12 +251,16 @@ export async function estimateAvailableVRAM(): Promise<number> {
 /**
  * Recommend a model based on available resources
  * @param supportsShaderF16 Whether the GPU supports shader-f16
+ * @param limitForMobile Whether to limit models for mobile devices
  */
-export async function recommendModel(supportsShaderF16: boolean = true): Promise<ModelInfo> {
+export async function recommendModel(
+  supportsShaderF16: boolean = true,
+  limitForMobile: boolean = false
+): Promise<ModelInfo> {
   const availableVRAM = await estimateAvailableVRAM();
 
   // Get models compatible with the GPU shader support
-  const compatibleModels = getAvailableModels(supportsShaderF16);
+  const compatibleModels = getAvailableModels(supportsShaderF16, limitForMobile);
 
   // Find the largest model that fits in available VRAM
   // with a conservative safety margin (use only 60% of available VRAM)
@@ -273,12 +284,14 @@ export async function recommendModel(supportsShaderF16: boolean = true): Promise
  * Used for fallback when a model fails to load
  * @param currentModelId Current model ID
  * @param supportsShaderF16 Whether the GPU supports shader-f16
+ * @param limitForMobile Whether to limit models for mobile devices
  */
 export function getNextSmallerModel(
   currentModelId: string,
-  supportsShaderF16: boolean = true
+  supportsShaderF16: boolean = true,
+  limitForMobile: boolean = false
 ): ModelInfo | null {
-  const availableModels = getAvailableModels(supportsShaderF16);
+  const availableModels = getAvailableModels(supportsShaderF16, limitForMobile);
   const currentIndex = availableModels.findIndex((m) => m.id === currentModelId);
 
   if (currentIndex <= 0) {
@@ -293,8 +306,12 @@ export function getNextSmallerModel(
 /**
  * Get the smallest available model
  * @param supportsShaderF16 Whether the GPU supports shader-f16
+ * @param limitForMobile Whether to limit models for mobile devices
  */
-export function getSmallestModel(supportsShaderF16: boolean = true): ModelInfo {
-  const availableModels = getAvailableModels(supportsShaderF16);
+export function getSmallestModel(
+  supportsShaderF16: boolean = true,
+  limitForMobile: boolean = false
+): ModelInfo {
+  const availableModels = getAvailableModels(supportsShaderF16, limitForMobile);
   return availableModels[0];
 }

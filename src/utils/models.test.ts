@@ -57,6 +57,25 @@ describe('models utility', () => {
       expect(models.length).toBeGreaterThan(0);
       expect(models.length).toBeLessThan(AVAILABLE_MODELS.length);
     });
+
+    it('should limit to 3 models for mobile devices', () => {
+      const models = getAvailableModels(true, true);
+      expect(models.length).toBe(3);
+    });
+
+    it('should limit to 3 smallest models for mobile without shader-f16', () => {
+      const models = getAvailableModels(false, true);
+      expect(models.length).toBe(3);
+      expect(models.every((m) => m.shaderType === 'f32')).toBe(true);
+    });
+
+    it('should return smallest models when limiting for mobile', () => {
+      const allModels = getAvailableModels(true, false);
+      const mobileModels = getAvailableModels(true, true);
+
+      // Mobile models should be the first 3 from all models
+      expect(mobileModels).toEqual(allModels.slice(0, 3));
+    });
   });
 
   describe('getModelById', () => {
