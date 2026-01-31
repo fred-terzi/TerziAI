@@ -1,10 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import {
-  AVAILABLE_MODELS,
-  getModelById,
-  estimateAvailableVRAM,
-  recommendModel,
-} from './models';
+import { AVAILABLE_MODELS, getModelById, estimateAvailableVRAM, recommendModel } from './models';
 
 describe('models utility', () => {
   describe('AVAILABLE_MODELS', () => {
