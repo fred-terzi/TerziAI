@@ -21,7 +21,18 @@ export function ChatMessage({ message }: ChatMessageProps) {
       <div className="message-avatar">{isUser ? '👤' : '🤖'}</div>
       <div className="message-content">
         <div className="message-role">{isUser ? 'You' : 'TerziAI'}</div>
-        <div className="message-text">{message.content || (isAssistant ? '...' : '')}</div>
+        <div className="message-text">
+          {message.content ||
+            (isAssistant ? (
+              <span className="typing-indicator" data-testid="typing-indicator">
+                <span></span>
+                <span></span>
+                <span></span>
+              </span>
+            ) : (
+              ''
+            ))}
+        </div>
         <div className="message-time">{message.timestamp.toLocaleTimeString()}</div>
       </div>
     </div>
