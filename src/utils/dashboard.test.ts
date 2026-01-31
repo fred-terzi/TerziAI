@@ -270,7 +270,7 @@ describe('getCacheInfo', () => {
       const request = {
         onsuccess: null as (() => void) | null,
         onerror: null,
-        onupgradeneeded: null,
+        onupgradeneeded: null as (() => void) | null,
         result: null as IDBDatabase | null,
       };
 

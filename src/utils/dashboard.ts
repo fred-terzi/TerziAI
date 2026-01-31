@@ -275,7 +275,7 @@ export async function clearModelCache(): Promise<void> {
       // Fallback for Safari: attempt to delete known WebLLM databases
       const knownDatabases = ['webllm-model-cache', 'webllm', 'mlc-models'];
       for (const dbName of knownDatabases) {
-        await new Promise<void>((resolve, reject) => {
+        await new Promise<void>((resolve) => {
           const request = indexedDB.deleteDatabase(dbName);
           request.onsuccess = () => resolve();
           request.onerror = () => {
