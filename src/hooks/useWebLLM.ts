@@ -303,6 +303,13 @@ export function useWebLLM(config: Partial<ChatConfig> = {}) {
     async (content: string): Promise<void> => {
       const isDemo = status === 'demo';
       const isReady = status === 'ready';
+      const isGeneratingNow = status === 'generating';
+
+      // Prevent concurrent generation - critical race condition fix
+      if (isGeneratingNow) {
+        console.warn('Generation already in progress, ignoring new request');
+        return;
+      }
 
       if (!isDemo && (!engineRef.current || !isReady)) {
         throw new Error('Engine not ready');
@@ -319,6 +326,7 @@ export function useWebLLM(config: Partial<ChatConfig> = {}) {
 
       if (isDemo) {
         // Demo mode - provide simulated response
+        setStatus('generating'); // Set generating state even in demo
         const assistantMessage: ChatMessage = {
           id: crypto.randomUUID(),
           role: 'assistant',
@@ -333,6 +341,10 @@ export function useWebLLM(config: Partial<ChatConfig> = {}) {
         demoResponseIndex.current++;
 
         for (let i = 0; i <= response.length; i++) {
+          // Check if aborted during typing
+          if (abortControllerRef.current?.signal.aborted) {
+            break;
+          }
           await new Promise((resolve) => setTimeout(resolve, 15));
           setMessages((prev) =>
             prev.map((m) =>
@@ -341,6 +353,7 @@ export function useWebLLM(config: Partial<ChatConfig> = {}) {
           );
         }
 
+        setStatus('demo'); // Return to demo status
         return;
       }
 
@@ -415,17 +428,19 @@ export function useWebLLM(config: Partial<ChatConfig> = {}) {
     abortControllerRef.current?.abort();
     if (status === 'generating') {
       setStatus('ready');
+    } else if (status === 'demo' && abortControllerRef.current) {
+      // In demo mode, return to demo status
+      setStatus('demo');
     }
   }, [status]);
 
   /**
-   * Clear all messages
+   * Clear all messages from state and storage
    */
   const clearMessages = useCallback(async () => {
     setMessages([]);
-    // Also clear from storage
-    const { clearMessages: clearStorageMessages } = await import('../utils/storage');
-    await clearStorageMessages();
+    // Clear from storage using the centralized storage utility
+    await saveMessagesToStorage([]);
   }, []);
 
   /**
