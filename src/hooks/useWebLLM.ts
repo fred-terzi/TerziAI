@@ -290,7 +290,7 @@ export function useWebLLM(config: Partial<ChatConfig> = {}) {
     stopGeneration,
     clearMessages,
     reset,
-    isReady: status === 'ready' || status === 'demo',
+    isReady: status === 'ready' || status === 'demo' || status === 'generating',
     isLoading: status === 'loading',
     isGenerating: status === 'generating',
     isDemo: status === 'demo',
