@@ -9,7 +9,7 @@ import './App.css';
  * A Progressive Web App for running LLMs directly in the browser
  */
 function App() {
-  const [selectedModelId, setSelectedModelId] = useState('SmolLM2-360M-Instruct-q4f16_1-MLC');
+  const [selectedModelId, setSelectedModelId] = useState('Llama-3.2-1B-Instruct-q4f32_1-MLC');
 
   const {
     messages,

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import type { ModelInfo } from '../utils/models';
-import { AVAILABLE_MODELS, recommendModel, estimateAvailableVRAM } from '../utils/models';
+import { getAvailableModels, recommendModel, estimateAvailableVRAM } from '../utils/models';
+import { checkGPUSupport } from '../utils/gpu';
 import './ModelSelector.css';
 
 interface ModelSelectorProps {
@@ -19,19 +20,34 @@ export function ModelSelector({ selectedModelId, onModelSelect, disabled }: Mode
   const [recommendedModelId, setRecommendedModelId] = useState<string | null>(null);
   const [availableVRAM, setAvailableVRAM] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(true);
+  const [availableModels, setAvailableModels] = useState<ModelInfo[]>([]);
+  const [supportsShaderF16, setSupportsShaderF16] = useState<boolean>(true);
 
   useEffect(() => {
     async function detectResources() {
       try {
+        // Check GPU support and shader-f16 capability
+        const gpuStatus = await checkGPUSupport();
+        const shaderF16Support = gpuStatus.supportsShaderF16;
+        setSupportsShaderF16(shaderF16Support);
+
+        // Get models compatible with the GPU
+        const models = getAvailableModels(shaderF16Support);
+        setAvailableModels(models);
+
+        // Estimate VRAM
         const vram = await estimateAvailableVRAM();
         setAvailableVRAM(vram);
 
-        const recommended = await recommendModel();
+        // Get recommended model based on VRAM and shader support
+        const recommended = await recommendModel(shaderF16Support);
         setRecommendedModelId(recommended.id);
       } catch (err) {
         console.error('Failed to detect resources:', err);
-        // Default to smallest model on error
-        setRecommendedModelId(AVAILABLE_MODELS[0].id);
+        // Default to f32 models on error for better compatibility
+        const fallbackModels = getAvailableModels(false);
+        setAvailableModels(fallbackModels);
+        setRecommendedModelId(fallbackModels[0].id);
       } finally {
         setIsLoading(false);
       }
@@ -49,7 +65,8 @@ export function ModelSelector({ selectedModelId, onModelSelect, disabled }: Mode
       return 'No GPU detected - models may not work';
     }
     const vramGB = (availableVRAM / 1024).toFixed(1);
-    return `Estimated GPU Memory: ~${vramGB}GB`;
+    const shaderInfo = supportsShaderF16 ? 'shader-f16 supported' : 'f32 only (no shader-f16)';
+    return `Estimated GPU Memory: ~${vramGB}GB (${shaderInfo})`;
   };
 
   const isRecommended = (model: ModelInfo) => {
@@ -69,7 +86,7 @@ export function ModelSelector({ selectedModelId, onModelSelect, disabled }: Mode
         disabled={disabled || isLoading}
         data-testid="model-select-dropdown"
       >
-        {AVAILABLE_MODELS.map((model) => (
+        {availableModels.map((model) => (
           <option key={model.id} value={model.id}>
             {model.name} - {model.description}
             {isRecommended(model) ? ' ⭐ Recommended' : ''}
