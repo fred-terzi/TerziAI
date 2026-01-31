@@ -48,32 +48,55 @@ function App() {
 
   const handleModelSelect = useCallback(
     async (modelId: string) => {
+      // Prevent model switching during generation
+      if (isGenerating) {
+        console.warn('Cannot change model while generating');
+        return;
+      }
       setSelectedModelId(modelId);
       // Reset the engine when changing models
       await reset();
     },
-    [reset]
+    [reset, isGenerating]
   );
 
-  const handleLoadModel = useCallback(() => {
-    initializeEngine();
-    // Navigate to chat page after loading starts
+  const handleLoadModel = useCallback(async () => {
+    // Prevent loading while already loading or generating
+    if (isLoading || isGenerating) {
+      console.warn('Operation already in progress');
+      return;
+    }
+    // Start loading and await to avoid race conditions
+    await initializeEngine();
+    // Navigate to chat page after loading completes or starts
     setCurrentPage('chat');
-  }, [initializeEngine]);
+  }, [initializeEngine, isLoading, isGenerating]);
 
-  const handleNavigate = useCallback((page: PageType) => {
-    setCurrentPage(page);
-    setMenuOpen(false);
-  }, []);
+  const handleNavigate = useCallback(
+    (page: PageType) => {
+      // Warn if navigating during generation
+      if (isGenerating && page !== 'chat') {
+        console.warn('Navigating away during generation - generation will continue in background');
+      }
+      setCurrentPage(page);
+      setMenuOpen(false);
+    },
+    [isGenerating]
+  );
 
   const handleClearCache = useCallback(async () => {
+    // Prevent clearing cache during operations
+    if (isLoading || isGenerating) {
+      console.warn('Cannot clear cache during operations');
+      return;
+    }
     // Reset the engine when cache is cleared
     await reset();
-  }, [reset]);
+  }, [reset, isLoading, isGenerating]);
 
-  const handleClearHistory = useCallback(() => {
+  const handleClearHistory = useCallback(async () => {
     // Clear messages from the WebLLM hook
-    clearMessages();
+    await clearMessages();
   }, [clearMessages]);
 
   return (

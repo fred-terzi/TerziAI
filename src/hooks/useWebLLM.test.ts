@@ -223,7 +223,8 @@ describe('useWebLLM', () => {
       });
 
       await waitFor(() => {
-        expect(storage.clearMessages).toHaveBeenCalled();
+        // Should save empty array instead of calling clearMessages
+        expect(storage.saveMessages).toHaveBeenCalledWith([]);
         expect(result.current.messages).toEqual([]);
       });
     });
