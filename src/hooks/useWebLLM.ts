@@ -13,6 +13,7 @@ import {
   saveMessages as saveMessagesToStorage,
   loadMessages as loadMessagesFromStorage,
 } from '../utils/storage';
+import { shouldUseLowResourceMode } from '../utils/device';
 
 // Simplified types for WebLLM engine to avoid strict type checking issues
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -28,6 +29,13 @@ const DEMO_RESPONSES = [
   "TerziAI demo mode is active. While I can't process your message with AI right now, this shows how the interface works. WebGPU support is needed for local LLM inference.",
   'Thanks for trying TerziAI! Demo mode is active due to missing WebGPU support. The full version runs AI models directly in your browser for complete privacy.',
 ];
+
+/**
+ * Maximum number of messages to keep in conversation history
+ * This prevents memory issues with very long conversations
+ * Keeps last N message pairs (user + assistant)
+ */
+const MAX_CONVERSATION_MESSAGES = 50;
 
 /**
  * Format VRAM from MB to GB for display
@@ -66,6 +74,7 @@ export function useWebLLM(config: Partial<ChatConfig> = {}) {
 
   const engineRef = useRef<WebLLMEngine | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const initializingRef = useRef<boolean>(false); // Track if initialization is in progress
   const demoResponseIndex = useRef(0);
 
   // Load messages from IndexedDB on mount
@@ -92,25 +101,53 @@ export function useWebLLM(config: Partial<ChatConfig> = {}) {
   }, [messages]);
 
   /**
+   * Properly dispose of the WebLLM engine
+   */
+  const disposeEngine = useCallback(async () => {
+    if (engineRef.current) {
+      try {
+        // Abort any pending generation
+        abortControllerRef.current?.abort();
+
+        // WebLLM engines may have internal cleanup needed
+        // Check if the engine has an unload or dispose method
+        const engine = engineRef.current;
+        if (typeof engine.unload === 'function') {
+          await engine.unload();
+        } else if (typeof engine.dispose === 'function') {
+          await engine.dispose();
+        }
+        // Clear the reference
+        engineRef.current = null;
+      } catch (err) {
+        console.error('Error disposing engine:', err);
+        // Still clear the reference even if disposal fails
+        engineRef.current = null;
+      }
+    }
+  }, []);
+
+  /**
    * Initialize the WebLLM engine or enter demo mode
    */
   const initializeEngine = useCallback(async () => {
+    // Prevent concurrent initializations
+    if (initializingRef.current) {
+      console.log('Initialization already in progress, skipping...');
+      return;
+    }
+
     if (engineRef.current || status === 'loading' || status === 'demo') {
       return;
     }
 
+    initializingRef.current = true;
+
     // If there's a cached model different from the selected one, clear it first
     if (cachedModelId && cachedModelId !== fullConfig.modelId) {
       setLoadingProgress({ text: 'Clearing cached model...', progress: 5 });
-      // Clear the engine if it exists
-      if (engineRef.current) {
-        try {
-          // WebLLM doesn't have a specific unload method, just clear the reference
-          engineRef.current = null;
-        } catch (err) {
-          console.error('Error clearing engine:', err);
-        }
-      }
+      // Properly dispose of the old engine
+      await disposeEngine();
       setCachedModelId(null);
     }
 
@@ -125,6 +162,7 @@ export function useWebLLM(config: Partial<ChatConfig> = {}) {
       setGpuInfo('Test environment - Demo mode');
       setLoadingProgress({ text: 'Demo mode active (test environment)', progress: 100 });
       setCachedModelId(fullConfig.modelId);
+      initializingRef.current = false;
       return;
     }
 
@@ -141,6 +179,7 @@ export function useWebLLM(config: Partial<ChatConfig> = {}) {
         progress: 100,
       });
       setCachedModelId(fullConfig.modelId);
+      initializingRef.current = false;
       return;
     }
 
@@ -167,7 +206,9 @@ export function useWebLLM(config: Partial<ChatConfig> = {}) {
       setLoadingProgress({ text: 'Model loaded successfully!', progress: 100 });
       setSuggestedModelId(null); // Clear any previous suggestions
       setCachedModelId(fullConfig.modelId); // Mark this model as cached
+      initializingRef.current = false;
     } catch (err) {
+      initializingRef.current = false;
       const errorMessage = err instanceof Error ? err.message : 'Failed to initialize LLM';
 
       // Check if it's a cache/network error (common with service worker issues)
@@ -218,8 +259,13 @@ export function useWebLLM(config: Partial<ChatConfig> = {}) {
       // If it's a memory error, suggest a smaller model
       if (isMemoryError) {
         const supportsShaderF16 = gpuStatus.supportsShaderF16;
-        const nextSmaller = getNextSmallerModel(fullConfig.modelId, supportsShaderF16);
-        const smallestModel = getSmallestModel(supportsShaderF16);
+        const limitForMobile = shouldUseLowResourceMode();
+        const nextSmaller = getNextSmallerModel(
+          fullConfig.modelId,
+          supportsShaderF16,
+          limitForMobile
+        );
+        const smallestModel = getSmallestModel(supportsShaderF16, limitForMobile);
         const currentModel = getModelById(fullConfig.modelId);
         const currentModelName = currentModel?.name || 'Selected model';
 
@@ -248,7 +294,7 @@ export function useWebLLM(config: Partial<ChatConfig> = {}) {
       setStatus('error');
       console.error('WebLLM initialization error:', err);
     }
-  }, [fullConfig.modelId, status, cachedModelId]);
+  }, [fullConfig.modelId, status, cachedModelId, disposeEngine]);
 
   /**
    * Send a message and get a response (real or demo)
@@ -304,9 +350,16 @@ export function useWebLLM(config: Partial<ChatConfig> = {}) {
       abortControllerRef.current = new AbortController();
 
       try {
+        // Limit conversation history to prevent memory issues
+        // Keep only the most recent messages
+        const recentMessages =
+          messages.length > MAX_CONVERSATION_MESSAGES
+            ? messages.slice(-MAX_CONVERSATION_MESSAGES)
+            : messages;
+
         const conversationHistory = [
           { role: 'system', content: fullConfig.systemPrompt },
-          ...messages.map((m) => ({ role: m.role, content: m.content })),
+          ...recentMessages.map((m) => ({ role: m.role, content: m.content })),
           { role: 'user', content },
         ];
 
@@ -379,8 +432,14 @@ export function useWebLLM(config: Partial<ChatConfig> = {}) {
    * Reset the engine state
    * Note: Does NOT clear messages to maintain chat persistence across model changes
    */
-  const reset = useCallback(() => {
-    engineRef.current = null;
+  const reset = useCallback(async () => {
+    // Abort any pending operations
+    abortControllerRef.current?.abort();
+    initializingRef.current = false;
+
+    // Properly dispose of the engine
+    await disposeEngine();
+
     setStatus('idle');
     setMode(null);
     setLoadingProgress({ text: '', progress: 0 });
@@ -388,14 +447,22 @@ export function useWebLLM(config: Partial<ChatConfig> = {}) {
     setGpuInfo(null);
     setSuggestedModelId(null);
     setCachedModelId(null);
-  }, []);
+  }, [disposeEngine]);
 
   // Cleanup on unmount
   useEffect(() => {
     return () => {
       abortControllerRef.current?.abort();
+      initializingRef.current = false;
+      // Dispose engine on unmount - note: async cleanup in useEffect is tricky
+      // but we can at least try to abort operations
+      if (engineRef.current) {
+        disposeEngine().catch((err) => {
+          console.error('Error disposing engine on unmount:', err);
+        });
+      }
     };
-  }, []);
+  }, [disposeEngine]);
 
   return {
     messages,
