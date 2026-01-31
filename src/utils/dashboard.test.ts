@@ -192,8 +192,11 @@ describe('getCacheInfo', () => {
       { name: 'webllm-cache', version: 1 },
     ]);
 
-    Object.defineProperty(global.indexedDB, 'databases', {
-      value: mockDatabases,
+    const originalIndexedDB = global.indexedDB;
+    Object.defineProperty(global, 'indexedDB', {
+      value: {
+        databases: mockDatabases,
+      },
       writable: true,
       configurable: true,
     });
@@ -202,13 +205,23 @@ describe('getCacheInfo', () => {
 
     expect(info.available).toBe(true);
     expect(info.hasCachedModel).toBe(true);
+
+    // Restore
+    Object.defineProperty(global, 'indexedDB', {
+      value: originalIndexedDB,
+      writable: true,
+      configurable: true,
+    });
   });
 
   test('handles errors gracefully', async () => {
     const mockDatabases = vi.fn().mockRejectedValue(new Error('Test error'));
 
-    Object.defineProperty(global.indexedDB, 'databases', {
-      value: mockDatabases,
+    const originalIndexedDB = global.indexedDB;
+    Object.defineProperty(global, 'indexedDB', {
+      value: {
+        databases: mockDatabases,
+      },
       writable: true,
       configurable: true,
     });
@@ -216,6 +229,13 @@ describe('getCacheInfo', () => {
     const info = await getCacheInfo();
 
     expect(info.available).toBe(false);
+
+    // Restore
+    Object.defineProperty(global, 'indexedDB', {
+      value: originalIndexedDB,
+      writable: true,
+      configurable: true,
+    });
   });
 });
 
@@ -250,20 +270,18 @@ describe('clearModelCache', () => {
       onblocked: null,
     });
 
-    Object.defineProperty(global.indexedDB, 'databases', {
-      value: mockDatabases,
-      writable: true,
-      configurable: true,
-    });
-
-    Object.defineProperty(global.indexedDB, 'deleteDatabase', {
-      value: mockDeleteDatabase,
+    const originalIndexedDB = global.indexedDB;
+    Object.defineProperty(global, 'indexedDB', {
+      value: {
+        databases: mockDatabases,
+        deleteDatabase: mockDeleteDatabase,
+      },
       writable: true,
       configurable: true,
     });
 
     // Trigger onsuccess immediately
-    mockDeleteDatabase.mockImplementation((name: string) => {
+    mockDeleteDatabase.mockImplementation(() => {
       const request = {
         onsuccess: null as (() => void) | null,
         onerror: null,
@@ -279,5 +297,12 @@ describe('clearModelCache', () => {
 
     expect(mockDeleteDatabase).toHaveBeenCalledWith('webllm-cache');
     expect(mockDeleteDatabase).not.toHaveBeenCalledWith('TerziAI');
+
+    // Restore
+    Object.defineProperty(global, 'indexedDB', {
+      value: originalIndexedDB,
+      writable: true,
+      configurable: true,
+    });
   });
 });

@@ -258,10 +258,10 @@ describe('App - Navigation', () => {
 
     // Open menu
     await user.click(screen.getByTestId('menu-button'));
-    
+
     // Click dashboard nav
     await user.click(screen.getByTestId('nav-dashboard'));
-    
+
     // Should show dashboard
     expect(screen.getByText(/Dashboard/)).toBeInTheDocument();
   });
@@ -271,7 +271,7 @@ describe('App - Navigation', () => {
     render(<App />);
 
     await user.click(screen.getByTestId('menu-button'));
-    
+
     expect(screen.getByTestId('nav-dashboard')).toBeInTheDocument();
   });
 });

@@ -73,11 +73,7 @@ export async function getStorageInfo(): Promise<StorageInfo> {
  */
 export function getMemoryInfo(): MemoryInfo {
   // Check if performance.memory is available (Chrome only)
-  if (
-    typeof performance !== 'undefined' &&
-    'memory' in performance &&
-    performance.memory
-  ) {
+  if (typeof performance !== 'undefined' && 'memory' in performance && performance.memory) {
     const memory = performance.memory as {
       usedJSHeapSize: number;
       totalJSHeapSize: number;

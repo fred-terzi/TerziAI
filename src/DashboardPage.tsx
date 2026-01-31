@@ -60,7 +60,11 @@ export function DashboardPage({ onClearCache, onClearHistory }: DashboardPagePro
   }, [loadDashboardData]);
 
   const handleClearCache = async () => {
-    if (!confirm('Are you sure you want to clear the model cache? This will require re-downloading models.')) {
+    if (
+      !confirm(
+        'Are you sure you want to clear the model cache? This will require re-downloading models.'
+      )
+    ) {
       return;
     }
 
@@ -144,8 +148,8 @@ export function DashboardPage({ onClearCache, onClearHistory }: DashboardPagePro
     <div className="dashboard-page">
       <div className="dashboard-header">
         <h2>📊 Dashboard</h2>
-        <button 
-          className="refresh-button" 
+        <button
+          className="refresh-button"
           onClick={handleRefresh}
           aria-label="Refresh dashboard"
           data-testid="refresh-button"
@@ -185,7 +189,7 @@ export function DashboardPage({ onClearCache, onClearHistory }: DashboardPagePro
                 </span>
               </div>
               <div className="progress-bar">
-                <div 
+                <div
                   className="progress-fill"
                   style={{ width: `${Math.min(storageInfo.percentUsed, 100)}%` }}
                   data-testid="storage-progress"
@@ -223,7 +227,7 @@ export function DashboardPage({ onClearCache, onClearHistory }: DashboardPagePro
                 </span>
               </div>
               <div className="progress-bar">
-                <div 
+                <div
                   className="progress-fill"
                   style={{ width: `${Math.min(memoryInfo.percentUsed, 100)}%` }}
                   data-testid="memory-progress"
