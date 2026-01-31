@@ -35,7 +35,9 @@ export function HomePage({
       <div className="welcome-screen">
         <div className="welcome-icon">🚀</div>
         <h2>Welcome to TerziAI</h2>
-        <p>Run AI models locally in your browser. Your conversations stay private and work offline.</p>
+        <p>
+          Run AI models locally in your browser. Your conversations stay private and work offline.
+        </p>
 
         {cachedModel && (
           <div className="cached-model-info" data-testid="cached-model-info">

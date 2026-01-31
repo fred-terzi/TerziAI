@@ -9,7 +9,10 @@ import type {
 import { DEFAULT_CHAT_CONFIG } from '../types/chat';
 import { checkGPUSupport, isTestEnvironment } from '../utils/gpu';
 import { getNextSmallerModel, getSmallestModel, getModelById } from '../utils/models';
-import { saveMessages as saveMessagesToStorage, loadMessages as loadMessagesFromStorage } from '../utils/storage';
+import {
+  saveMessages as saveMessagesToStorage,
+  loadMessages as loadMessagesFromStorage,
+} from '../utils/storage';
 
 // Simplified types for WebLLM engine to avoid strict type checking issues
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -242,7 +245,7 @@ export function useWebLLM(config: Partial<ChatConfig> = {}) {
       setStatus('error');
       console.error('WebLLM initialization error:', err);
     }
-  }, [fullConfig.modelId, status]);
+  }, [fullConfig.modelId, status, cachedModelId]);
 
   /**
    * Send a message and get a response (real or demo)

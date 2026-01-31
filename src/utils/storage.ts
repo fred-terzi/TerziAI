@@ -32,7 +32,7 @@ function openDatabase(): Promise<IDBDatabase> {
 
     request.onupgradeneeded = (event) => {
       const db = (event.target as IDBOpenDBRequest).result;
-      
+
       // Create messages store if it doesn't exist
       if (!db.objectStoreNames.contains(MESSAGES_STORE)) {
         db.createObjectStore(MESSAGES_STORE, { keyPath: 'id' });
@@ -101,10 +101,17 @@ export async function loadMessages(): Promise<ChatMessage[]> {
       request.onsuccess = () => {
         db.close();
         // Convert ISO strings back to Date objects
-        const messages = request.result.map((msg: any) => ({
-          ...msg,
-          timestamp: new Date(msg.timestamp),
-        }));
+        const messages = request.result.map(
+          (msg: {
+            id: string;
+            role: 'user' | 'assistant' | 'system';
+            content: string;
+            timestamp: string;
+          }) => ({
+            ...msg,
+            timestamp: new Date(msg.timestamp),
+          })
+        );
         resolve(messages);
       };
       request.onerror = () => {

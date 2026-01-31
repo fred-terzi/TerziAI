@@ -49,7 +49,7 @@ describe('App', () => {
   test('shows menu dropdown when menu button is clicked', async () => {
     const user = userEvent.setup();
     render(<App />);
-    
+
     await user.click(screen.getByTestId('menu-button'));
     expect(screen.getByTestId('menu-dropdown')).toBeInTheDocument();
   });
