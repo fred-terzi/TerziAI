@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import type {
   ChatMessage,
   LLMStatus,
@@ -29,7 +29,17 @@ const DEMO_RESPONSES = [
  * Provides state management for chat messages and LLM operations
  * Supports both GPU-accelerated and demo mode
  */
-export function useWebLLM(config: ChatConfig = DEFAULT_CHAT_CONFIG) {
+export function useWebLLM(config: Partial<ChatConfig> = {}) {
+  // Memoize the full config to avoid unnecessary re-renders
+  const fullConfig: ChatConfig = useMemo(() => {
+    return {
+      modelId: config.modelId ?? DEFAULT_CHAT_CONFIG.modelId,
+      systemPrompt: config.systemPrompt ?? DEFAULT_CHAT_CONFIG.systemPrompt,
+      maxTokens: config.maxTokens ?? DEFAULT_CHAT_CONFIG.maxTokens,
+      temperature: config.temperature ?? DEFAULT_CHAT_CONFIG.temperature,
+    };
+  }, [config.modelId, config.systemPrompt, config.maxTokens, config.temperature]);
+
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [status, setStatus] = useState<LLMStatus>('idle');
   const [mode, setMode] = useState<EngineMode | null>(null);
@@ -89,7 +99,7 @@ export function useWebLLM(config: ChatConfig = DEFAULT_CHAT_CONFIG) {
       // Dynamic import to avoid issues during testing/SSR
       const webllm = await import('@mlc-ai/web-llm');
 
-      const engine = await webllm.CreateMLCEngine(config.modelId, {
+      const engine = await webllm.CreateMLCEngine(fullConfig.modelId, {
         initProgressCallback: (progress: { text: string; progress: number }) => {
           setLoadingProgress({
             text: progress.text,
@@ -124,7 +134,7 @@ export function useWebLLM(config: ChatConfig = DEFAULT_CHAT_CONFIG) {
       setStatus('error');
       console.error('WebLLM initialization error:', err);
     }
-  }, [config.modelId, status]);
+  }, [fullConfig.modelId, status]);
 
   /**
    * Send a message and get a response (real or demo)
@@ -181,7 +191,7 @@ export function useWebLLM(config: ChatConfig = DEFAULT_CHAT_CONFIG) {
 
       try {
         const conversationHistory = [
-          { role: 'system', content: config.systemPrompt },
+          { role: 'system', content: fullConfig.systemPrompt },
           ...messages.map((m) => ({ role: m.role, content: m.content })),
           { role: 'user', content },
         ];
@@ -197,8 +207,8 @@ export function useWebLLM(config: ChatConfig = DEFAULT_CHAT_CONFIG) {
 
         const completion = await engineRef.current.chat.completions.create({
           messages: conversationHistory,
-          max_tokens: config.maxTokens,
-          temperature: config.temperature,
+          max_tokens: fullConfig.maxTokens,
+          temperature: fullConfig.temperature,
           stream: true,
         });
 
@@ -228,7 +238,7 @@ export function useWebLLM(config: ChatConfig = DEFAULT_CHAT_CONFIG) {
         console.error('WebLLM generation error:', err);
       }
     },
-    [config, messages, status]
+    [fullConfig, messages, status]
   );
 
   /**

@@ -1,6 +1,7 @@
-import { useRef, useEffect, useCallback } from 'react';
-import { ChatMessage, ChatInput, LoadingIndicator } from './components';
+import { useRef, useEffect, useCallback, useState } from 'react';
+import { ChatMessage, ChatInput, LoadingIndicator, ModelSelector } from './components';
 import { useWebLLM } from './hooks/useWebLLM';
+import { getModelById } from './utils/models';
 import './App.css';
 
 /**
@@ -8,6 +9,8 @@ import './App.css';
  * A Progressive Web App for running LLMs directly in the browser
  */
 function App() {
+  const [selectedModelId, setSelectedModelId] = useState('SmolLM2-360M-Instruct-q4f16_1-MLC');
+
   const {
     messages,
     status,
@@ -22,7 +25,7 @@ function App() {
     isLoading,
     isGenerating,
     isDemo,
-  } = useWebLLM();
+  } = useWebLLM({ modelId: selectedModelId });
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -44,6 +47,13 @@ function App() {
     },
     [sendMessage]
   );
+
+  const handleModelSelect = useCallback((modelId: string) => {
+    setSelectedModelId(modelId);
+  }, []);
+
+  const selectedModel = getModelById(selectedModelId);
+  const modelDisplayName = selectedModel?.name || 'SmolLM2-360M';
 
   return (
     <div className="app">
@@ -75,11 +85,16 @@ function App() {
               Run AI models locally in your browser. Your conversations stay private and work
               offline.
             </p>
+            <ModelSelector
+              selectedModelId={selectedModelId}
+              onModelSelect={handleModelSelect}
+            />
             <button className="start-button" onClick={initializeEngine} data-testid="start-button">
               Load AI Model
             </button>
-            <p className="model-info">Using SmolLM2-360M (lightweight model for fast responses)</p>
-            <p className="model-info">Falls back to demo mode if no GPU is detected</p>
+            <p className="model-info">
+              Selected: {modelDisplayName} - Falls back to demo mode if no GPU is detected
+            </p>
           </div>
         )}
 
