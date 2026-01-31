@@ -69,13 +69,36 @@ describe('ChatMessage', () => {
     expect(screen.getByText('🤖')).toBeInTheDocument();
   });
 
-  test('shows loading dots for empty assistant message', () => {
+  test('shows typing animation for empty assistant message', () => {
     const assistantMessage: ChatMessageType = {
       ...baseMessage,
       role: 'assistant',
       content: '',
     };
     render(<ChatMessage message={assistantMessage} />);
-    expect(screen.getByText('...')).toBeInTheDocument();
+    expect(screen.getByTestId('typing-indicator')).toBeInTheDocument();
+  });
+
+  test('typing indicator contains three animated dots', () => {
+    const assistantMessage: ChatMessageType = {
+      ...baseMessage,
+      role: 'assistant',
+      content: '',
+    };
+    render(<ChatMessage message={assistantMessage} />);
+    const typingIndicator = screen.getByTestId('typing-indicator');
+    const dots = typingIndicator.querySelectorAll('span');
+    expect(dots).toHaveLength(3);
+  });
+
+  test('does not show typing animation when message has content', () => {
+    const assistantMessage: ChatMessageType = {
+      ...baseMessage,
+      role: 'assistant',
+      content: 'Hello there!',
+    };
+    render(<ChatMessage message={assistantMessage} />);
+    expect(screen.queryByTestId('typing-indicator')).not.toBeInTheDocument();
+    expect(screen.getByText('Hello there!')).toBeInTheDocument();
   });
 });
