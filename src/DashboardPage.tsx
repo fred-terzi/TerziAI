@@ -37,7 +37,7 @@ export function DashboardPage({ onClearCache, onClearHistory }: DashboardPagePro
     try {
       const [storage, memory, cache] = await Promise.all([
         getStorageInfo(),
-        Promise.resolve(getMemoryInfo()),
+        getMemoryInfo(),
         getCacheInfo(),
       ]);
 
@@ -236,7 +236,7 @@ export function DashboardPage({ onClearCache, onClearHistory }: DashboardPagePro
             </div>
           ) : (
             <p className="info-unavailable" data-testid="memory-unavailable">
-              Memory information not available (Chrome-only feature)
+              Memory information not available
             </p>
           )}
         </section>

@@ -32,7 +32,7 @@ describe('DashboardPage', () => {
       available: true,
     });
 
-    vi.mocked(dashboardUtils.getMemoryInfo).mockReturnValue({
+    vi.mocked(dashboardUtils.getMemoryInfo).mockResolvedValue({
       used: 50 * 1024 * 1024, // 50 MB
       total: 200 * 1024 * 1024, // 200 MB
       percentUsed: 25,
@@ -110,7 +110,7 @@ describe('DashboardPage', () => {
   });
 
   test('shows unavailable message when memory is not available', async () => {
-    vi.mocked(dashboardUtils.getMemoryInfo).mockReturnValue({
+    vi.mocked(dashboardUtils.getMemoryInfo).mockResolvedValue({
       used: 0,
       total: 0,
       percentUsed: 0,

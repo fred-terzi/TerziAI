@@ -120,7 +120,7 @@ describe('getStorageInfo', () => {
 });
 
 describe('getMemoryInfo', () => {
-  test('returns unavailable when performance.memory is not available', () => {
+  test('returns unavailable when performance.memory is not available and storage estimate fails', async () => {
     // Mock performance without memory
     const originalPerformance = global.performance;
     Object.defineProperty(global, 'performance', {
@@ -129,7 +129,15 @@ describe('getMemoryInfo', () => {
       configurable: true,
     });
 
-    const info = getMemoryInfo();
+    // Mock navigator.storage as unavailable
+    const originalStorage = navigator.storage;
+    Object.defineProperty(navigator, 'storage', {
+      value: undefined,
+      writable: true,
+      configurable: true,
+    });
+
+    const info = await getMemoryInfo();
 
     expect(info.available).toBe(false);
     expect(info.used).toBe(0);
@@ -141,9 +149,14 @@ describe('getMemoryInfo', () => {
       writable: true,
       configurable: true,
     });
+    Object.defineProperty(navigator, 'storage', {
+      value: originalStorage,
+      writable: true,
+      configurable: true,
+    });
   });
 
-  test('returns memory info when available', () => {
+  test('returns memory info when performance.memory is available', async () => {
     // Mock performance.memory
     Object.defineProperty(global.performance, 'memory', {
       value: {
@@ -155,12 +168,50 @@ describe('getMemoryInfo', () => {
       configurable: true,
     });
 
-    const info = getMemoryInfo();
+    const info = await getMemoryInfo();
 
     expect(info.available).toBe(true);
     expect(info.used).toBe(50 * 1024 * 1024);
     expect(info.total).toBe(200 * 1024 * 1024);
     expect(info.percentUsed).toBe(25);
+  });
+
+  test('estimates memory from storage when performance.memory is unavailable', async () => {
+    // Mock performance without memory
+    const originalPerformance = global.performance;
+    Object.defineProperty(global, 'performance', {
+      value: {},
+      writable: true,
+      configurable: true,
+    });
+
+    // Mock navigator.storage.estimate
+    const mockEstimate = vi.fn().mockResolvedValue({
+      usage: 10 * 1024 * 1024, // 10 MB storage used
+      quota: 5 * 1024 * 1024 * 1024, // 5 GB quota
+    });
+
+    Object.defineProperty(navigator, 'storage', {
+      value: {
+        estimate: mockEstimate,
+      },
+      writable: true,
+      configurable: true,
+    });
+
+    const info = await getMemoryInfo();
+
+    expect(info.available).toBe(true);
+    expect(info.used).toBeGreaterThan(0);
+    expect(info.total).toBeGreaterThan(0);
+    expect(info.percentUsed).toBeGreaterThan(0);
+
+    // Restore
+    Object.defineProperty(global, 'performance', {
+      value: originalPerformance,
+      writable: true,
+      configurable: true,
+    });
   });
 });
 
