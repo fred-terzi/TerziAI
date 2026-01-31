@@ -2,7 +2,7 @@
  * Tests for device detection utilities
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { isMobileDevice, isTabletDevice, getDeviceInfo, shouldUseLowResourceMode } from './device';
 
 describe('device detection', () => {
