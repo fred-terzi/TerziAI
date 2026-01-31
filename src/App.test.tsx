@@ -228,3 +228,50 @@ describe('App - Error State', () => {
     expect(screen.getByText('Retry')).toBeInTheDocument();
   });
 });
+
+describe('App - Navigation', () => {
+  beforeEach(() => {
+    vi.mocked(useWebLLMModule.useWebLLM).mockReturnValue({
+      messages: [],
+      status: 'idle',
+      mode: null,
+      loadingProgress: { text: '', progress: 0 },
+      error: null,
+      gpuInfo: null,
+      suggestedModelId: null,
+      cachedModelId: null,
+      initializeEngine: vi.fn(),
+      sendMessage: vi.fn(),
+      stopGeneration: vi.fn(),
+      clearMessages: vi.fn(),
+      reset: vi.fn(),
+      isReady: false,
+      isLoading: false,
+      isGenerating: false,
+      isDemo: false,
+    });
+  });
+
+  test('navigates to dashboard page', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    // Open menu
+    await user.click(screen.getByTestId('menu-button'));
+    
+    // Click dashboard nav
+    await user.click(screen.getByTestId('nav-dashboard'));
+    
+    // Should show dashboard
+    expect(screen.getByText(/Dashboard/)).toBeInTheDocument();
+  });
+
+  test('shows dashboard menu item in dropdown', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(screen.getByTestId('menu-button'));
+    
+    expect(screen.getByTestId('nav-dashboard')).toBeInTheDocument();
+  });
+});

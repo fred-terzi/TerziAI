@@ -2,7 +2,7 @@
  * Page types and navigation utilities
  */
 
-export type PageType = 'home' | 'chat';
+export type PageType = 'home' | 'chat' | 'dashboard';
 
 export interface NavigationState {
   currentPage: PageType;
