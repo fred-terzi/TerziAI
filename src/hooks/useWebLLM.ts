@@ -124,6 +124,14 @@ export function useWebLLM(config: Partial<ChatConfig> = {}) {
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to initialize LLM';
 
+      // Check if it's a cache/network error (common with service worker issues)
+      const errorMessageLower = errorMessage.toLowerCase();
+      const isCacheError =
+        errorMessageLower.includes('cache') ||
+        errorMessageLower.includes('network error') ||
+        errorMessageLower.includes('networkerror') ||
+        errorMessageLower.includes('failed to fetch');
+
       // Check if it's a memory/resource error (model too large)
       const isMemoryError =
         errorMessage.includes('memory') ||
@@ -131,6 +139,19 @@ export function useWebLLM(config: Partial<ChatConfig> = {}) {
         errorMessage.includes('Out of memory') ||
         errorMessage.includes('allocation') ||
         errorMessage.includes('buffer');
+
+      // If it's a cache error, provide helpful guidance
+      if (isCacheError) {
+        setError(
+          'Failed to download model files. This may be due to network issues, ' +
+            'insufficient disk space, or browser cache limitations. ' +
+            'Try: (1) Ensure you have sufficient disk space (2GB+), ' +
+            '(2) Clear browser cache and reload, or (3) Try a different browser.'
+        );
+        setStatus('error');
+        console.error('WebLLM cache/network error:', err);
+        return;
+      }
 
       // If it's a GPU error, fall back to demo mode
       if (

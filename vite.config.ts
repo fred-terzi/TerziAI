@@ -17,7 +17,17 @@ export default defineConfig({
       manifest: false, // Using external manifest.json
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
-        maximumFileSizeToCacheInBytes: 50 * 1024 * 1024, // 50MB for LLM assets
+        // Increase size limit for local app assets
+        maximumFileSizeToCacheInBytes: 100 * 1024 * 1024, // 100MB for app assets
+        // Exclude external CDN URLs from service worker caching
+        // WebLLM handles its own model caching via IndexedDB
+        runtimeCaching: [
+          {
+            // Exclude WebLLM CDN URLs (huggingface.co, jsdelivr.net) from caching
+            urlPattern: /^https?:\/\/.*(huggingface\.co|jsdelivr\.net|hf\.co).*/i,
+            handler: 'NetworkOnly',
+          },
+        ],
       },
     }),
   ],
