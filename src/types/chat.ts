@@ -50,7 +50,7 @@ export interface ChatConfig {
  * Default chat configuration
  */
 export const DEFAULT_CHAT_CONFIG: ChatConfig = {
-  modelId: 'SmolLM2-360M-Instruct-q4f16_1-MLC',
+  modelId: 'Llama-3.2-1B-Instruct-q4f32_1-MLC',
   systemPrompt:
     "You are TerziAI, a helpful local AI assistant. You are running directly in the user's browser using WebLLM. Be concise and helpful.",
   maxTokens: 512,

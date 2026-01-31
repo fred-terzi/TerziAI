@@ -150,8 +150,9 @@ export function useWebLLM(config: Partial<ChatConfig> = {}) {
 
       // If it's a memory error, suggest a smaller model
       if (isMemoryError) {
-        const nextSmaller = getNextSmallerModel(fullConfig.modelId);
-        const smallestModel = getSmallestModel();
+        const supportsShaderF16 = gpuStatus.supportsShaderF16;
+        const nextSmaller = getNextSmallerModel(fullConfig.modelId, supportsShaderF16);
+        const smallestModel = getSmallestModel(supportsShaderF16);
         const currentModel = getModelById(fullConfig.modelId);
         const currentModelName = currentModel?.name || 'Selected model';
 

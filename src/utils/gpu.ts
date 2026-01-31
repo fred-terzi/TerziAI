@@ -13,6 +13,7 @@ declare global {
   interface GPUAdapter {
     requestAdapterInfo?(): Promise<GPUAdapterInfo>;
     info?: GPUAdapterInfo;
+    features?: Set<string>;
   }
 
   interface GPUAdapterInfo {
@@ -28,6 +29,8 @@ export interface GPUStatus {
   webGPUSupported: boolean;
   /** Whether a compatible GPU adapter was found */
   hasGPU: boolean;
+  /** Whether shader-f16 is supported */
+  supportsShaderF16: boolean;
   /** GPU vendor name if available */
   vendor?: string;
   /** GPU architecture if available */
@@ -45,6 +48,7 @@ export async function checkGPUSupport(): Promise<GPUStatus> {
     return {
       webGPUSupported: false,
       hasGPU: false,
+      supportsShaderF16: false,
       error: 'WebGPU is not supported in this browser',
     };
   }
@@ -57,6 +61,7 @@ export async function checkGPUSupport(): Promise<GPUStatus> {
       return {
         webGPUSupported: true,
         hasGPU: false,
+        supportsShaderF16: false,
         error: 'No compatible GPU adapter found',
       };
     }
@@ -74,9 +79,13 @@ export async function checkGPUSupport(): Promise<GPUStatus> {
       architecture = adapter.info.architecture;
     }
 
+    // Check if shader-f16 is supported
+    const supportsShaderF16 = adapter.features?.has('shader-f16') ?? false;
+
     return {
       webGPUSupported: true,
       hasGPU: true,
+      supportsShaderF16,
       vendor,
       architecture,
     };
@@ -84,6 +93,7 @@ export async function checkGPUSupport(): Promise<GPUStatus> {
     return {
       webGPUSupported: true,
       hasGPU: false,
+      supportsShaderF16: false,
       error: err instanceof Error ? err.message : 'Failed to detect GPU',
     };
   }

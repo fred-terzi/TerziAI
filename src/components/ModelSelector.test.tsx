@@ -3,6 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ModelSelector } from './ModelSelector';
 import * as modelsUtil from '../utils/models';
+import * as gpuUtil from '../utils/gpu';
 
 // Mock the models utility
 vi.mock('../utils/models', async () => {
@@ -14,12 +15,26 @@ vi.mock('../utils/models', async () => {
   };
 });
 
+// Mock the GPU utility
+vi.mock('../utils/gpu', async () => {
+  const actual = await vi.importActual('../utils/gpu');
+  return {
+    ...actual,
+    checkGPUSupport: vi.fn(),
+  };
+});
+
 describe('ModelSelector', () => {
   const mockOnModelSelect = vi.fn();
 
   beforeEach(() => {
     vi.clearAllMocks();
     // Default mocks
+    vi.mocked(gpuUtil.checkGPUSupport).mockResolvedValue({
+      webGPUSupported: true,
+      hasGPU: true,
+      supportsShaderF16: true,
+    });
     vi.mocked(modelsUtil.estimateAvailableVRAM).mockResolvedValue(4000);
     vi.mocked(modelsUtil.recommendModel).mockResolvedValue({
       id: 'Llama-3.2-3B-Instruct-q4f16_1-MLC',
@@ -28,6 +43,7 @@ describe('ModelSelector', () => {
       vramMB: 2263.69,
       description: 'Medium model with better reasoning capabilities',
       lowResource: true,
+      shaderType: 'f16',
     });
   });
 
@@ -67,7 +83,9 @@ describe('ModelSelector', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText(/Estimated GPU Memory: ~3.9GB/)).toBeInTheDocument();
+      expect(
+        screen.getByText(/Estimated GPU Memory: ~3.9GB \(shader-f16 supported\)/)
+      ).toBeInTheDocument();
     });
   });
 
