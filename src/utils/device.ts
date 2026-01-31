@@ -47,8 +47,7 @@ export function isMobileDevice(): boolean {
   const hasSmallScreen = window.innerWidth < 768;
 
   // Check for touch support (mobile/tablet indicator)
-  const hasTouch =
-    'ontouchstart' in window || navigator.maxTouchPoints > 0 || navigator.maxTouchPoints > 0;
+  const hasTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 
   // Mobile device is one that:
   // 1. Has mobile UA (and NOT tablet), OR
@@ -76,8 +75,7 @@ export function isTabletDevice(): boolean {
   const hasTabletScreen = window.innerWidth >= 768 && window.innerWidth <= 1024;
 
   // Check for touch support
-  const hasTouch =
-    'ontouchstart' in window || navigator.maxTouchPoints > 0 || navigator.maxTouchPoints > 0;
+  const hasTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 
   return isTablet || (hasTabletScreen && hasTouch);
 }
