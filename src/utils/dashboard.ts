@@ -87,7 +87,7 @@ async function estimateMemoryFromStorage(): Promise<MemoryInfo> {
 
     // Estimate memory based on storage usage
     // Typical mobile browsers allocate memory proportional to storage
-    // Use a conservative estimate: assume app uses ~10-20% of storage as active memory
+    // Use a conservative estimate: assume app uses ~15% of storage as active memory
     const estimatedUsed = Math.min(storageUsed * 0.15, 100 * 1024 * 1024); // Cap at 100MB
 
     // Estimate total available memory based on device characteristics
