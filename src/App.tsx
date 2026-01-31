@@ -68,14 +68,35 @@ function App() {
   return (
     <div className="app">
       <header className="app-header">
-        <button
-          className="menu-button"
-          onClick={() => setMenuOpen(!menuOpen)}
-          aria-label="Toggle menu"
-          data-testid="menu-button"
-        >
-          ☰
-        </button>
+        <div className="menu-container">
+          <button
+            className="menu-button"
+            onClick={() => setMenuOpen(!menuOpen)}
+            aria-label="Toggle menu"
+            data-testid="menu-button"
+          >
+            ☰
+          </button>
+          {menuOpen && (
+            <div className="menu-dropdown" data-testid="menu-dropdown">
+              <button
+                className="menu-item"
+                onClick={() => handleNavigate('home')}
+                data-testid="nav-home"
+              >
+                🏠 Home
+              </button>
+              <button
+                className="menu-item"
+                onClick={() => handleNavigate('chat')}
+                disabled={!isReady && !isLoading}
+                data-testid="nav-chat"
+              >
+                💬 Chat
+              </button>
+            </div>
+          )}
+        </div>
         <div className="app-logo">🤖</div>
         <div className="app-title">
           <h1>TerziAI</h1>
@@ -86,26 +107,6 @@ function App() {
           <span className="status-text">{isDemo ? 'demo' : status}</span>
         </div>
       </header>
-
-      {menuOpen && (
-        <div className="menu-dropdown" data-testid="menu-dropdown">
-          <button
-            className="menu-item"
-            onClick={() => handleNavigate('home')}
-            data-testid="nav-home"
-          >
-            🏠 Home
-          </button>
-          <button
-            className="menu-item"
-            onClick={() => handleNavigate('chat')}
-            disabled={!isReady && !isLoading}
-            data-testid="nav-chat"
-          >
-            💬 Chat
-          </button>
-        </div>
-      )}
 
       {isDemo && (
         <div className="demo-banner" data-testid="demo-banner">
