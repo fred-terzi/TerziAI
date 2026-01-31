@@ -199,13 +199,30 @@ export async function getCacheInfo(): Promise<CacheInfo> {
       try {
         const db = await new Promise<IDBDatabase | null>((resolve, reject) => {
           const request = indexedDB.open(dbName);
-          request.onsuccess = () => resolve(request.result);
-          request.onerror = () => reject(request.error);
+          let resolved = false;
+
+          request.onsuccess = () => {
+            if (!resolved) {
+              resolved = true;
+              resolve(request.result);
+            }
+          };
+
+          request.onerror = () => {
+            if (!resolved) {
+              resolved = true;
+              reject(request.error);
+            }
+          };
+
           // Database doesn't exist - this is not an error for our purposes
           request.onupgradeneeded = () => {
-            // New database being created, doesn't exist yet
-            request.transaction?.abort();
-            resolve(null);
+            if (!resolved) {
+              resolved = true;
+              // New database being created, doesn't exist yet
+              request.transaction?.abort();
+              resolve(null);
+            }
           };
         });
 
@@ -218,8 +235,12 @@ export async function getCacheInfo(): Promise<CacheInfo> {
             available: true,
           };
         }
-      } catch {
+      } catch (error) {
         // Database doesn't exist or error opening it, continue to next
+        // Log for debugging but don't treat as fatal error
+        if (error && typeof error === 'object' && 'message' in error) {
+          console.debug(`Unable to check database ${dbName}:`, error.message);
+        }
         continue;
       }
     }
@@ -278,8 +299,13 @@ export async function clearModelCache(): Promise<void> {
         await new Promise<void>((resolve) => {
           const request = indexedDB.deleteDatabase(dbName);
           request.onsuccess = () => resolve();
-          request.onerror = () => {
-            // Ignore errors for databases that don't exist
+          request.onerror = (event) => {
+            // Most errors are "database doesn't exist" which is fine
+            // Log other errors for debugging
+            const error = (event.target as IDBOpenDBRequest)?.error;
+            if (error && error.name !== 'NotFoundError') {
+              console.debug(`Error deleting database ${dbName}:`, error.message);
+            }
             resolve();
           };
           request.onblocked = () => {
