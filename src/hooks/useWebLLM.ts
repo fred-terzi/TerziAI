@@ -125,12 +125,12 @@ export function useWebLLM(config: Partial<ChatConfig> = {}) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to initialize LLM';
 
       // Check if it's a cache/network error (common with service worker issues)
+      const errorMessageLower = errorMessage.toLowerCase();
       const isCacheError =
-        errorMessage.includes('cache') ||
-        errorMessage.includes('Cache') ||
-        errorMessage.includes('network error') ||
-        errorMessage.includes('NetworkError') ||
-        errorMessage.includes('Failed to fetch');
+        errorMessageLower.includes('cache') ||
+        errorMessageLower.includes('network error') ||
+        errorMessageLower.includes('networkerror') ||
+        errorMessageLower.includes('failed to fetch');
 
       // Check if it's a memory/resource error (model too large)
       const isMemoryError =

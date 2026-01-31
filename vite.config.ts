@@ -24,7 +24,6 @@ export default defineConfig({
         runtimeCaching: [
           {
             // Exclude WebLLM CDN URLs (huggingface.co, jsdelivr.net) from caching
-            // WebLLM handles its own model caching via IndexedDB
             urlPattern: /^https?:\/\/.*(huggingface\.co|jsdelivr\.net|hf\.co).*/i,
             handler: 'NetworkOnly',
           },
