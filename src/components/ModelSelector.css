@@ -1,0 +1,109 @@
+.model-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin: 1.5rem 0;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.model-selector-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+  margin-bottom: 0.25rem;
+}
+
+.model-selector-dropdown {
+  width: 100%;
+  padding: 0.75rem;
+  font-size: 0.875rem;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  color: white;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.model-selector-dropdown:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.model-selector-dropdown:focus {
+  outline: none;
+  border-color: #4ade80;
+  box-shadow: 0 0 0 2px rgba(74, 222, 128, 0.2);
+}
+
+.model-selector-dropdown:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.model-selector-dropdown option {
+  background: #1a1a1a;
+  color: white;
+  padding: 0.5rem;
+}
+
+.model-selector-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  font-size: 0.75rem;
+}
+
+.model-info-text {
+  color: rgba(255, 255, 255, 0.7);
+  flex: 1;
+}
+
+.use-recommended-button {
+  padding: 0.5rem 1rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: linear-gradient(135deg, #4ade80 0%, #3b82f6 100%);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.use-recommended-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(74, 222, 128, 0.3);
+}
+
+.use-recommended-button:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.use-recommended-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Mobile responsive */
+@media (max-width: 640px) {
+  .model-selector {
+    padding: 0.75rem;
+    margin: 1rem 0;
+  }
+
+  .model-selector-info {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .use-recommended-button {
+    width: 100%;
+  }
+}
