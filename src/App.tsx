@@ -1,7 +1,9 @@
-import { useRef, useEffect, useCallback, useState } from 'react';
-import { ChatMessage, ChatInput, LoadingIndicator, ModelSelector } from './components';
+import { useCallback, useState } from 'react';
+import { LoadingIndicator } from './components';
+import { HomePage } from './HomePage';
+import { ChatPage } from './ChatPage';
 import { useWebLLM } from './hooks/useWebLLM';
-import { getModelById } from './utils/models';
+import type { PageType } from './utils/navigation';
 import './App.css';
 
 /**
@@ -10,6 +12,8 @@ import './App.css';
  */
 function App() {
   const [selectedModelId, setSelectedModelId] = useState('Llama-3.2-1B-Instruct-q4f32_1-MLC');
+  const [currentPage, setCurrentPage] = useState<PageType>('home');
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const {
     messages,
@@ -18,6 +22,7 @@ function App() {
     error,
     gpuInfo,
     suggestedModelId,
+    cachedModelId,
     initializeEngine,
     sendMessage,
     stopGeneration,
@@ -28,16 +33,6 @@ function App() {
     isGenerating,
     isDemo,
   } = useWebLLM({ modelId: selectedModelId });
-
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  // Auto-scroll to bottom when new messages arrive
-  useEffect(() => {
-    // scrollIntoView may not be available in test environments
-    if (messagesEndRef.current?.scrollIntoView) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
-    }
-  }, [messages]);
 
   const handleSendMessage = useCallback(
     async (content: string) => {
@@ -59,12 +54,28 @@ function App() {
     [reset]
   );
 
-  const selectedModel = getModelById(selectedModelId);
-  const modelDisplayName = selectedModel?.name || 'SmolLM2-360M';
+  const handleLoadModel = useCallback(() => {
+    initializeEngine();
+    // Navigate to chat page after loading starts
+    setCurrentPage('chat');
+  }, [initializeEngine]);
+
+  const handleNavigate = useCallback((page: PageType) => {
+    setCurrentPage(page);
+    setMenuOpen(false);
+  }, []);
 
   return (
     <div className="app">
       <header className="app-header">
+        <button
+          className="menu-button"
+          onClick={() => setMenuOpen(!menuOpen)}
+          aria-label="Toggle menu"
+          data-testid="menu-button"
+        >
+          ☰
+        </button>
         <div className="app-logo">🤖</div>
         <div className="app-title">
           <h1>TerziAI</h1>
@@ -76,6 +87,26 @@ function App() {
         </div>
       </header>
 
+      {menuOpen && (
+        <div className="menu-dropdown" data-testid="menu-dropdown">
+          <button
+            className="menu-item"
+            onClick={() => handleNavigate('home')}
+            data-testid="nav-home"
+          >
+            🏠 Home
+          </button>
+          <button
+            className="menu-item"
+            onClick={() => handleNavigate('chat')}
+            disabled={!isReady && !isLoading}
+            data-testid="nav-chat"
+          >
+            💬 Chat
+          </button>
+        </div>
+      )}
+
       {isDemo && (
         <div className="demo-banner" data-testid="demo-banner">
           <span className="demo-icon">⚡</span>
@@ -84,24 +115,6 @@ function App() {
       )}
 
       <main className="app-main">
-        {status === 'idle' && (
-          <div className="welcome-screen" data-testid="welcome-screen">
-            <div className="welcome-icon">🚀</div>
-            <h2>Welcome to TerziAI</h2>
-            <p>
-              Run AI models locally in your browser. Your conversations stay private and work
-              offline.
-            </p>
-            <ModelSelector selectedModelId={selectedModelId} onModelSelect={handleModelSelect} />
-            <button className="start-button" onClick={initializeEngine} data-testid="start-button">
-              Load AI Model
-            </button>
-            <p className="model-info">
-              Selected: {modelDisplayName} - Falls back to demo mode if no GPU is detected
-            </p>
-          </div>
-        )}
-
         {isLoading && <LoadingIndicator progress={loadingProgress} visible={true} />}
 
         {error && (
@@ -125,42 +138,29 @@ function App() {
           </div>
         )}
 
-        {isReady && (
-          <div className="chat-container">
-            <div className="messages-list" data-testid="messages-list">
-              {messages.length === 0 ? (
-                <div className="empty-state">
-                  <p>
-                    {isDemo
-                      ? '⚡ Demo mode active! Try chatting to see how TerziAI works.'
-                      : '✨ Model loaded! Start chatting with TerziAI.'}
-                  </p>
-                </div>
-              ) : (
-                messages.map((message) => <ChatMessage key={message.id} message={message} />)
-              )}
-              <div ref={messagesEndRef} />
-            </div>
-          </div>
+        {currentPage === 'home' && !isLoading && !error && (
+          <HomePage
+            selectedModelId={selectedModelId}
+            onModelSelect={handleModelSelect}
+            onLoadModel={handleLoadModel}
+            cachedModelId={cachedModelId}
+            status={status}
+            gpuInfo={gpuInfo}
+          />
+        )}
+
+        {currentPage === 'chat' && isReady && !error && (
+          <ChatPage
+            messages={messages}
+            status={status}
+            isGenerating={isGenerating}
+            isDemo={isDemo}
+            onSendMessage={handleSendMessage}
+            onStopGeneration={stopGeneration}
+            onClearMessages={clearMessages}
+          />
         )}
       </main>
-
-      {isReady && (
-        <footer className="app-footer">
-          <ChatInput
-            onSend={handleSendMessage}
-            disabled={isLoading}
-            isGenerating={isGenerating}
-            onStop={stopGeneration}
-            placeholder={isDemo ? 'Try a message (demo mode)...' : 'Ask TerziAI anything...'}
-          />
-          {messages.length > 0 && (
-            <button className="clear-button" onClick={clearMessages} data-testid="clear-button">
-              Clear Chat
-            </button>
-          )}
-        </footer>
-      )}
     </div>
   );
 }
