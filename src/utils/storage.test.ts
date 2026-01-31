@@ -35,5 +35,35 @@ describe('storage utilities', () => {
       // Should not throw
       await expect(clearMessages()).resolves.toBeUndefined();
     });
+
+    test('saveMessages handles empty array gracefully', async () => {
+      // Should not throw when saving empty array (used to clear storage)
+      await expect(saveMessages([])).resolves.toBeUndefined();
+    });
+
+    test('multiple save operations complete without errors', async () => {
+      const messages1: ChatMessage[] = [
+        {
+          id: '1',
+          role: 'user',
+          content: 'First',
+          timestamp: new Date('2024-01-01'),
+        },
+      ];
+
+      const messages2: ChatMessage[] = [
+        {
+          id: '2',
+          role: 'assistant',
+          content: 'Second',
+          timestamp: new Date('2024-01-02'),
+        },
+      ];
+
+      // Should not throw for rapid successive saves
+      await expect(saveMessages(messages1)).resolves.toBeUndefined();
+      await expect(saveMessages(messages2)).resolves.toBeUndefined();
+      await expect(saveMessages([])).resolves.toBeUndefined();
+    });
   });
 });
