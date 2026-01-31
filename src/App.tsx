@@ -17,10 +17,12 @@ function App() {
     loadingProgress,
     error,
     gpuInfo,
+    suggestedModelId,
     initializeEngine,
     sendMessage,
     stopGeneration,
     clearMessages,
+    reset,
     isReady,
     isLoading,
     isGenerating,
@@ -48,9 +50,14 @@ function App() {
     [sendMessage]
   );
 
-  const handleModelSelect = useCallback((modelId: string) => {
-    setSelectedModelId(modelId);
-  }, []);
+  const handleModelSelect = useCallback(
+    (modelId: string) => {
+      setSelectedModelId(modelId);
+      // Reset the engine when changing models
+      reset();
+    },
+    [reset]
+  );
 
   const selectedModel = getModelById(selectedModelId);
   const modelDisplayName = selectedModel?.name || 'SmolLM2-360M';
@@ -101,9 +108,20 @@ function App() {
           <div className="error-message" data-testid="error-message">
             <span className="error-icon">⚠️</span>
             <span>{error}</span>
-            <button onClick={initializeEngine} className="retry-button">
-              Retry
-            </button>
+            <div className="error-actions">
+              <button onClick={initializeEngine} className="retry-button">
+                Retry
+              </button>
+              {suggestedModelId && (
+                <button
+                  onClick={() => handleModelSelect(suggestedModelId)}
+                  className="use-suggested-button"
+                  data-testid="use-suggested-button"
+                >
+                  Try Suggested Model
+                </button>
+              )}
+            </div>
           </div>
         )}
 

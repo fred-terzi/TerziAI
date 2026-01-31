@@ -8,6 +8,7 @@ import type {
 } from '../types/chat';
 import { DEFAULT_CHAT_CONFIG } from '../types/chat';
 import { checkGPUSupport, isTestEnvironment } from '../utils/gpu';
+import { getNextSmallerModel, getSmallestModel, getModelById } from '../utils/models';
 
 // Simplified types for WebLLM engine to avoid strict type checking issues
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -49,6 +50,7 @@ export function useWebLLM(config: Partial<ChatConfig> = {}) {
   });
   const [error, setError] = useState<string | null>(null);
   const [gpuInfo, setGpuInfo] = useState<string | null>(null);
+  const [suggestedModelId, setSuggestedModelId] = useState<string | null>(null);
 
   const engineRef = useRef<WebLLMEngine | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -111,8 +113,17 @@ export function useWebLLM(config: Partial<ChatConfig> = {}) {
       engineRef.current = engine;
       setStatus('ready');
       setLoadingProgress({ text: 'Model loaded successfully!', progress: 100 });
+      setSuggestedModelId(null); // Clear any previous suggestions
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to initialize LLM';
+
+      // Check if it's a memory/resource error (model too large)
+      const isMemoryError =
+        errorMessage.includes('memory') ||
+        errorMessage.includes('OOM') ||
+        errorMessage.includes('Out of memory') ||
+        errorMessage.includes('allocation') ||
+        errorMessage.includes('buffer');
 
       // If it's a GPU error, fall back to demo mode
       if (
@@ -130,7 +141,34 @@ export function useWebLLM(config: Partial<ChatConfig> = {}) {
         return;
       }
 
-      setError(errorMessage);
+      // If it's a memory error, suggest a smaller model
+      if (isMemoryError) {
+        const nextSmaller = getNextSmallerModel(fullConfig.modelId);
+        const smallestModel = getSmallestModel();
+        const currentModel = getModelById(fullConfig.modelId);
+
+        if (nextSmaller) {
+          setSuggestedModelId(nextSmaller.id);
+          setError(
+            `Model "${currentModel?.name}" is too large for your device. ` +
+              `Try "${nextSmaller.name}" instead (requires ${Math.round((nextSmaller.vramMB / 1024) * 10) / 10}GB). ` +
+              `The smallest model "${smallestModel.name}" works on most devices.`
+          );
+        } else {
+          // Already at smallest model, fall back to demo mode
+          setMode('demo');
+          setStatus('demo');
+          setGpuInfo('Insufficient memory for AI models');
+          setLoadingProgress({
+            text: 'Demo mode active - Insufficient memory',
+            progress: 100,
+          });
+          return;
+        }
+      } else {
+        setError(errorMessage);
+      }
+
       setStatus('error');
       console.error('WebLLM initialization error:', err);
     }
@@ -269,6 +307,7 @@ export function useWebLLM(config: Partial<ChatConfig> = {}) {
     setLoadingProgress({ text: '', progress: 0 });
     setError(null);
     setGpuInfo(null);
+    setSuggestedModelId(null);
   }, []);
 
   // Cleanup on unmount
@@ -285,6 +324,7 @@ export function useWebLLM(config: Partial<ChatConfig> = {}) {
     loadingProgress,
     error,
     gpuInfo,
+    suggestedModelId,
     initializeEngine,
     sendMessage,
     stopGeneration,

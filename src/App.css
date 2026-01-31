@@ -196,7 +196,7 @@
 /* Error Message */
 .error-message {
   display: flex;
-  align-items: center;
+  flex-direction: column;
   gap: 12px;
   padding: 16px 24px;
   background: rgba(244, 67, 54, 0.1);
@@ -209,8 +209,14 @@
   font-size: 1.5em;
 }
 
+.error-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 8px;
+}
+
 .retry-button {
-  margin-left: auto;
   padding: 8px 16px;
   background: #f44336;
   color: white;
@@ -222,6 +228,20 @@
 
 .retry-button:hover {
   background: #d32f2f;
+}
+
+.use-suggested-button {
+  padding: 8px 16px;
+  background: #4caf50;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.use-suggested-button:hover {
+  background: #45a049;
 }
 
 /* Footer */
