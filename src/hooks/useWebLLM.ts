@@ -71,21 +71,24 @@ export function useWebLLM(config: Partial<ChatConfig> = {}) {
   // Load messages from IndexedDB on mount
   useEffect(() => {
     const loadStoredMessages = async () => {
-      const stored = await loadMessagesFromStorage();
-      if (stored.length > 0) {
-        setMessages(stored);
+      try {
+        const stored = await loadMessagesFromStorage();
+        if (stored.length > 0) {
+          setMessages(stored);
+        }
+      } catch (err) {
+        console.error('Failed to load stored messages:', err);
+        // Continue with empty messages - don't crash the app
       }
     };
     loadStoredMessages();
   }, []);
 
-  // Save messages to IndexedDB whenever they change
+  // Save messages to IndexedDB whenever they change (including when empty to clear storage)
   useEffect(() => {
-    if (messages.length > 0) {
-      saveMessagesToStorage(messages).catch((err) => {
-        console.error('Failed to save messages:', err);
-      });
-    }
+    saveMessagesToStorage(messages).catch((err) => {
+      console.error('Failed to save messages:', err);
+    });
   }, [messages]);
 
   /**
@@ -374,10 +377,10 @@ export function useWebLLM(config: Partial<ChatConfig> = {}) {
 
   /**
    * Reset the engine state
+   * Note: Does NOT clear messages to maintain chat persistence across model changes
    */
   const reset = useCallback(() => {
     engineRef.current = null;
-    setMessages([]);
     setStatus('idle');
     setMode(null);
     setLoadingProgress({ text: '', progress: 0 });
