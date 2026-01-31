@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react';
 import { LoadingIndicator } from './components';
 import { HomePage } from './HomePage';
 import { ChatPage } from './ChatPage';
+import { DashboardPage } from './DashboardPage';
 import { useWebLLM } from './hooks/useWebLLM';
 import type { PageType } from './utils/navigation';
 import './App.css';
@@ -65,6 +66,16 @@ function App() {
     setMenuOpen(false);
   }, []);
 
+  const handleClearCache = useCallback(() => {
+    // Reset the engine when cache is cleared
+    reset();
+  }, [reset]);
+
+  const handleClearHistory = useCallback(() => {
+    // Clear messages from the WebLLM hook
+    clearMessages();
+  }, [clearMessages]);
+
   return (
     <div className="app">
       <header className="app-header">
@@ -93,6 +104,13 @@ function App() {
                 data-testid="nav-chat"
               >
                 💬 Chat
+              </button>
+              <button
+                className="menu-item"
+                onClick={() => handleNavigate('dashboard')}
+                data-testid="nav-dashboard"
+              >
+                📊 Dashboard
               </button>
             </div>
           )}
@@ -160,6 +178,10 @@ function App() {
             onStopGeneration={stopGeneration}
             onClearMessages={clearMessages}
           />
+        )}
+
+        {currentPage === 'dashboard' && (
+          <DashboardPage onClearCache={handleClearCache} onClearHistory={handleClearHistory} />
         )}
       </main>
     </div>
