@@ -8,6 +8,7 @@ import type {
 } from '../types/chat';
 import { DEFAULT_CHAT_CONFIG } from '../types/chat';
 import { checkGPUSupport, isTestEnvironment } from '../utils/gpu';
+import { getNextSmallerModel, getSmallestModel, getModelById } from '../utils/models';
 
 // Simplified types for WebLLM engine to avoid strict type checking issues
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -23,6 +24,13 @@ const DEMO_RESPONSES = [
   "TerziAI demo mode is active. While I can't process your message with AI right now, this shows how the interface works. WebGPU support is needed for local LLM inference.",
   'Thanks for trying TerziAI! Demo mode is active due to missing WebGPU support. The full version runs AI models directly in your browser for complete privacy.',
 ];
+
+/**
+ * Format VRAM from MB to GB for display
+ */
+function formatVRAMToGB(vramMB: number): string {
+  return (Math.round((vramMB / 1024) * 10) / 10).toString();
+}
 
 /**
  * Custom hook for managing WebLLM chat interactions
@@ -49,6 +57,7 @@ export function useWebLLM(config: Partial<ChatConfig> = {}) {
   });
   const [error, setError] = useState<string | null>(null);
   const [gpuInfo, setGpuInfo] = useState<string | null>(null);
+  const [suggestedModelId, setSuggestedModelId] = useState<string | null>(null);
 
   const engineRef = useRef<WebLLMEngine | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -111,8 +120,17 @@ export function useWebLLM(config: Partial<ChatConfig> = {}) {
       engineRef.current = engine;
       setStatus('ready');
       setLoadingProgress({ text: 'Model loaded successfully!', progress: 100 });
+      setSuggestedModelId(null); // Clear any previous suggestions
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to initialize LLM';
+
+      // Check if it's a memory/resource error (model too large)
+      const isMemoryError =
+        errorMessage.includes('memory') ||
+        errorMessage.includes('OOM') ||
+        errorMessage.includes('Out of memory') ||
+        errorMessage.includes('allocation') ||
+        errorMessage.includes('buffer');
 
       // If it's a GPU error, fall back to demo mode
       if (
@@ -130,7 +148,35 @@ export function useWebLLM(config: Partial<ChatConfig> = {}) {
         return;
       }
 
-      setError(errorMessage);
+      // If it's a memory error, suggest a smaller model
+      if (isMemoryError) {
+        const nextSmaller = getNextSmallerModel(fullConfig.modelId);
+        const smallestModel = getSmallestModel();
+        const currentModel = getModelById(fullConfig.modelId);
+        const currentModelName = currentModel?.name || 'Selected model';
+
+        if (nextSmaller) {
+          setSuggestedModelId(nextSmaller.id);
+          setError(
+            `Model "${currentModelName}" is too large for your device. ` +
+              `Try "${nextSmaller.name}" instead (requires ${formatVRAMToGB(nextSmaller.vramMB)}GB). ` +
+              `The smallest model "${smallestModel.name}" works on most devices.`
+          );
+        } else {
+          // Already at smallest model, fall back to demo mode
+          setMode('demo');
+          setStatus('demo');
+          setGpuInfo('Insufficient memory for AI models');
+          setLoadingProgress({
+            text: 'Demo mode active - Insufficient memory',
+            progress: 100,
+          });
+          return;
+        }
+      } else {
+        setError(errorMessage);
+      }
+
       setStatus('error');
       console.error('WebLLM initialization error:', err);
     }
@@ -269,6 +315,7 @@ export function useWebLLM(config: Partial<ChatConfig> = {}) {
     setLoadingProgress({ text: '', progress: 0 });
     setError(null);
     setGpuInfo(null);
+    setSuggestedModelId(null);
   }, []);
 
   // Cleanup on unmount
@@ -285,6 +332,7 @@ export function useWebLLM(config: Partial<ChatConfig> = {}) {
     loadingProgress,
     error,
     gpuInfo,
+    suggestedModelId,
     initializeEngine,
     sendMessage,
     stopGeneration,

@@ -21,6 +21,18 @@ export interface ModelInfo {
 }
 
 /**
+ * Error information for model loading failures
+ */
+export interface ModelLoadError {
+  /** The model that failed to load */
+  failedModelId: string;
+  /** Error message */
+  message: string;
+  /** Suggested smaller model to try */
+  suggestedModel: ModelInfo | null;
+}
+
+/**
  * Available models sorted by VRAM requirements
  */
 export const AVAILABLE_MODELS: ModelInfo[] = [
@@ -161,8 +173,9 @@ export async function recommendModel(): Promise<ModelInfo> {
   const availableVRAM = await estimateAvailableVRAM();
 
   // Find the largest model that fits in available VRAM
-  // with a safety margin (use only 80% of available VRAM)
-  const safeVRAM = availableVRAM * 0.8;
+  // with a conservative safety margin (use only 60% of available VRAM)
+  // This is more conservative to prevent crashes with larger models
+  const safeVRAM = availableVRAM * 0.6;
 
   // Filter models that fit in available VRAM
   const compatibleModels = AVAILABLE_MODELS.filter((m) => m.vramMB <= safeVRAM);
@@ -174,4 +187,27 @@ export async function recommendModel(): Promise<ModelInfo> {
 
   // Return the largest compatible model
   return compatibleModels[compatibleModels.length - 1];
+}
+
+/**
+ * Get the next smaller model than the current one
+ * Used for fallback when a model fails to load
+ */
+export function getNextSmallerModel(currentModelId: string): ModelInfo | null {
+  const currentIndex = AVAILABLE_MODELS.findIndex((m) => m.id === currentModelId);
+
+  if (currentIndex <= 0) {
+    // Already at smallest model or model not found
+    return null;
+  }
+
+  // Return the previous model in the list (which is smaller)
+  return AVAILABLE_MODELS[currentIndex - 1];
+}
+
+/**
+ * Get the smallest available model
+ */
+export function getSmallestModel(): ModelInfo {
+  return AVAILABLE_MODELS[0];
 }
