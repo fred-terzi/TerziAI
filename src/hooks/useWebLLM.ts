@@ -9,6 +9,10 @@ import type {
 import { DEFAULT_CHAT_CONFIG } from '../types/chat';
 import { checkGPUSupport, isTestEnvironment } from '../utils/gpu';
 import { getNextSmallerModel, getSmallestModel, getModelById } from '../utils/models';
+import {
+  saveMessages as saveMessagesToStorage,
+  loadMessages as loadMessagesFromStorage,
+} from '../utils/storage';
 
 // Simplified types for WebLLM engine to avoid strict type checking issues
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -58,10 +62,31 @@ export function useWebLLM(config: Partial<ChatConfig> = {}) {
   const [error, setError] = useState<string | null>(null);
   const [gpuInfo, setGpuInfo] = useState<string | null>(null);
   const [suggestedModelId, setSuggestedModelId] = useState<string | null>(null);
+  const [cachedModelId, setCachedModelId] = useState<string | null>(null);
 
   const engineRef = useRef<WebLLMEngine | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const demoResponseIndex = useRef(0);
+
+  // Load messages from IndexedDB on mount
+  useEffect(() => {
+    const loadStoredMessages = async () => {
+      const stored = await loadMessagesFromStorage();
+      if (stored.length > 0) {
+        setMessages(stored);
+      }
+    };
+    loadStoredMessages();
+  }, []);
+
+  // Save messages to IndexedDB whenever they change
+  useEffect(() => {
+    if (messages.length > 0) {
+      saveMessagesToStorage(messages).catch((err) => {
+        console.error('Failed to save messages:', err);
+      });
+    }
+  }, [messages]);
 
   /**
    * Initialize the WebLLM engine or enter demo mode
@@ -69,6 +94,21 @@ export function useWebLLM(config: Partial<ChatConfig> = {}) {
   const initializeEngine = useCallback(async () => {
     if (engineRef.current || status === 'loading' || status === 'demo') {
       return;
+    }
+
+    // If there's a cached model different from the selected one, clear it first
+    if (cachedModelId && cachedModelId !== fullConfig.modelId) {
+      setLoadingProgress({ text: 'Clearing cached model...', progress: 5 });
+      // Clear the engine if it exists
+      if (engineRef.current) {
+        try {
+          // WebLLM doesn't have a specific unload method, just clear the reference
+          engineRef.current = null;
+        } catch (err) {
+          console.error('Error clearing engine:', err);
+        }
+      }
+      setCachedModelId(null);
     }
 
     setStatus('loading');
@@ -81,6 +121,7 @@ export function useWebLLM(config: Partial<ChatConfig> = {}) {
       setStatus('demo');
       setGpuInfo('Test environment - Demo mode');
       setLoadingProgress({ text: 'Demo mode active (test environment)', progress: 100 });
+      setCachedModelId(fullConfig.modelId);
       return;
     }
 
@@ -96,6 +137,7 @@ export function useWebLLM(config: Partial<ChatConfig> = {}) {
         text: 'Demo mode active - No GPU detected',
         progress: 100,
       });
+      setCachedModelId(fullConfig.modelId);
       return;
     }
 
@@ -121,6 +163,7 @@ export function useWebLLM(config: Partial<ChatConfig> = {}) {
       setStatus('ready');
       setLoadingProgress({ text: 'Model loaded successfully!', progress: 100 });
       setSuggestedModelId(null); // Clear any previous suggestions
+      setCachedModelId(fullConfig.modelId); // Mark this model as cached
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to initialize LLM';
 
@@ -202,7 +245,7 @@ export function useWebLLM(config: Partial<ChatConfig> = {}) {
       setStatus('error');
       console.error('WebLLM initialization error:', err);
     }
-  }, [fullConfig.modelId, status]);
+  }, [fullConfig.modelId, status, cachedModelId]);
 
   /**
    * Send a message and get a response (real or demo)
@@ -322,8 +365,11 @@ export function useWebLLM(config: Partial<ChatConfig> = {}) {
   /**
    * Clear all messages
    */
-  const clearMessages = useCallback(() => {
+  const clearMessages = useCallback(async () => {
     setMessages([]);
+    // Also clear from storage
+    const { clearMessages: clearStorageMessages } = await import('../utils/storage');
+    await clearStorageMessages();
   }, []);
 
   /**
@@ -338,6 +384,7 @@ export function useWebLLM(config: Partial<ChatConfig> = {}) {
     setError(null);
     setGpuInfo(null);
     setSuggestedModelId(null);
+    setCachedModelId(null);
   }, []);
 
   // Cleanup on unmount
@@ -355,6 +402,7 @@ export function useWebLLM(config: Partial<ChatConfig> = {}) {
     error,
     gpuInfo,
     suggestedModelId,
+    cachedModelId,
     initializeEngine,
     sendMessage,
     stopGeneration,
