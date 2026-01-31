@@ -237,7 +237,7 @@ describe('getCacheInfo', () => {
     });
   });
 
-  test('detects cached models', async () => {
+  test('detects cached models using databases() API', async () => {
     const mockDatabases = vi.fn().mockResolvedValue([
       { name: 'TerziAI', version: 1 },
       { name: 'webllm-cache', version: 1 },
@@ -256,6 +256,100 @@ describe('getCacheInfo', () => {
 
     expect(info.available).toBe(true);
     expect(info.hasCachedModel).toBe(true);
+
+    // Restore
+    Object.defineProperty(global, 'indexedDB', {
+      value: originalIndexedDB,
+      writable: true,
+      configurable: true,
+    });
+  });
+
+  test('detects cached models using Safari fallback (no databases() API)', async () => {
+    const mockOpen = vi.fn().mockImplementation((dbName: string) => {
+      const request = {
+        onsuccess: null as (() => void) | null,
+        onerror: null,
+        onupgradeneeded: null,
+        result: null as IDBDatabase | null,
+      };
+
+      // Simulate successful open for webllm database
+      if (dbName === 'webllm') {
+        request.result = {
+          close: vi.fn(),
+        } as unknown as IDBDatabase;
+        setTimeout(() => {
+          if (request.onsuccess) request.onsuccess();
+        }, 0);
+      } else {
+        // Simulate database doesn't exist for other names
+        setTimeout(() => {
+          if (request.onupgradeneeded) request.onupgradeneeded();
+        }, 0);
+      }
+
+      return request;
+    });
+
+    const originalIndexedDB = global.indexedDB;
+    Object.defineProperty(global, 'indexedDB', {
+      value: {
+        // No databases() function to simulate Safari
+        open: mockOpen,
+      },
+      writable: true,
+      configurable: true,
+    });
+
+    const info = await getCacheInfo();
+
+    expect(info.available).toBe(true);
+    expect(info.hasCachedModel).toBe(true);
+    expect(mockOpen).toHaveBeenCalled();
+
+    // Restore
+    Object.defineProperty(global, 'indexedDB', {
+      value: originalIndexedDB,
+      writable: true,
+      configurable: true,
+    });
+  });
+
+  test('returns no cached models when Safari fallback finds no databases', async () => {
+    const mockOpen = vi.fn().mockImplementation(() => {
+      const request = {
+        onsuccess: null,
+        onerror: null,
+        onupgradeneeded: null as (() => void) | null,
+        result: null,
+        transaction: {
+          abort: vi.fn(),
+        },
+      };
+
+      // Simulate all databases not existing (onupgradeneeded)
+      setTimeout(() => {
+        if (request.onupgradeneeded) request.onupgradeneeded();
+      }, 0);
+
+      return request;
+    });
+
+    const originalIndexedDB = global.indexedDB;
+    Object.defineProperty(global, 'indexedDB', {
+      value: {
+        // No databases() function to simulate Safari
+        open: mockOpen,
+      },
+      writable: true,
+      configurable: true,
+    });
+
+    const info = await getCacheInfo();
+
+    expect(info.available).toBe(true);
+    expect(info.hasCachedModel).toBe(false);
 
     // Restore
     Object.defineProperty(global, 'indexedDB', {
@@ -309,7 +403,7 @@ describe('clearModelCache', () => {
     });
   });
 
-  test('clears webllm databases', async () => {
+  test('clears webllm databases using databases() API', async () => {
     const mockDatabases = vi.fn().mockResolvedValue([
       { name: 'TerziAI', version: 1 },
       { name: 'webllm-cache', version: 1 },
@@ -348,6 +442,44 @@ describe('clearModelCache', () => {
 
     expect(mockDeleteDatabase).toHaveBeenCalledWith('webllm-cache');
     expect(mockDeleteDatabase).not.toHaveBeenCalledWith('TerziAI');
+
+    // Restore
+    Object.defineProperty(global, 'indexedDB', {
+      value: originalIndexedDB,
+      writable: true,
+      configurable: true,
+    });
+  });
+
+  test('clears webllm databases using Safari fallback (no databases() API)', async () => {
+    const mockDeleteDatabase = vi.fn().mockImplementation(() => {
+      const request = {
+        onsuccess: null as (() => void) | null,
+        onerror: null,
+        onblocked: null,
+      };
+      setTimeout(() => {
+        if (request.onsuccess) request.onsuccess();
+      }, 0);
+      return request;
+    });
+
+    const originalIndexedDB = global.indexedDB;
+    Object.defineProperty(global, 'indexedDB', {
+      value: {
+        // No databases() function to simulate Safari
+        deleteDatabase: mockDeleteDatabase,
+      },
+      writable: true,
+      configurable: true,
+    });
+
+    await clearModelCache();
+
+    // Should try to delete all known WebLLM database names
+    expect(mockDeleteDatabase).toHaveBeenCalledWith('webllm-model-cache');
+    expect(mockDeleteDatabase).toHaveBeenCalledWith('webllm');
+    expect(mockDeleteDatabase).toHaveBeenCalledWith('mlc-models');
 
     // Restore
     Object.defineProperty(global, 'indexedDB', {

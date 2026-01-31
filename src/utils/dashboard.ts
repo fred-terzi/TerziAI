@@ -156,6 +156,8 @@ export async function getMemoryInfo(): Promise<MemoryInfo> {
 /**
  * Get cache information
  * Estimates the size of cached models by examining IndexedDB
+ * Uses indexedDB.databases() on supported browsers (Chrome, Firefox, Edge)
+ * Falls back to attempting to open known WebLLM databases on Safari
  */
 export async function getCacheInfo(): Promise<CacheInfo> {
   if (typeof indexedDB === 'undefined') {
@@ -167,24 +169,65 @@ export async function getCacheInfo(): Promise<CacheInfo> {
   }
 
   try {
-    // Check if there's a cached model by looking at the webllm database
-    // WebLLM typically uses IndexedDB to cache models
-    const databases = await indexedDB.databases();
-    let modelCacheSize = 0;
-    let hasCachedModel = false;
+    // Try modern API first (Chrome, Firefox, Edge)
+    // Safari does not support indexedDB.databases()
+    if (typeof indexedDB.databases === 'function') {
+      const databases = await indexedDB.databases();
+      let modelCacheSize = 0;
+      let hasCachedModel = false;
 
-    // Look for WebLLM cache database
-    const webllmDb = databases.find((db) => db.name?.includes('webllm'));
-    if (webllmDb) {
-      hasCachedModel = true;
-      // We can't easily get the exact size without opening the DB,
-      // so we provide a reasonable estimate
-      modelCacheSize = 0; // Will be updated if we can measure it
+      // Look for WebLLM cache database
+      const webllmDb = databases.find((db) => db.name?.includes('webllm'));
+      if (webllmDb) {
+        hasCachedModel = true;
+        // We can't easily get the exact size without opening the DB,
+        // so we provide a reasonable estimate
+        modelCacheSize = 0; // Will be updated if we can measure it
+      }
+
+      return {
+        modelCacheSize,
+        hasCachedModel,
+        available: true,
+      };
     }
 
+    // Fallback for Safari: attempt to open known WebLLM databases
+    // WebLLM uses various database names depending on version
+    const knownDatabases = ['webllm-model-cache', 'webllm', 'mlc-models'];
+    for (const dbName of knownDatabases) {
+      try {
+        const db = await new Promise<IDBDatabase | null>((resolve, reject) => {
+          const request = indexedDB.open(dbName);
+          request.onsuccess = () => resolve(request.result);
+          request.onerror = () => reject(request.error);
+          // Database doesn't exist - this is not an error for our purposes
+          request.onupgradeneeded = () => {
+            // New database being created, doesn't exist yet
+            request.transaction?.abort();
+            resolve(null);
+          };
+        });
+
+        if (db) {
+          db.close();
+          // Found an existing database, there's a cached model
+          return {
+            modelCacheSize: 0,
+            hasCachedModel: true,
+            available: true,
+          };
+        }
+      } catch {
+        // Database doesn't exist or error opening it, continue to next
+        continue;
+      }
+    }
+
+    // No cached models found
     return {
-      modelCacheSize,
-      hasCachedModel,
+      modelCacheSize: 0,
+      hasCachedModel: false,
       available: true,
     };
   } catch (error) {
@@ -200,6 +243,8 @@ export async function getCacheInfo(): Promise<CacheInfo> {
 /**
  * Clear model cache
  * Clears WebLLM model cache from IndexedDB
+ * Uses indexedDB.databases() on supported browsers (Chrome, Firefox, Edge)
+ * Falls back to attempting to delete known WebLLM databases on Safari
  */
 export async function clearModelCache(): Promise<void> {
   if (typeof indexedDB === 'undefined') {
@@ -207,17 +252,38 @@ export async function clearModelCache(): Promise<void> {
   }
 
   try {
-    const databases = await indexedDB.databases();
+    // Try modern API first (Chrome, Firefox, Edge)
+    if (typeof indexedDB.databases === 'function') {
+      const databases = await indexedDB.databases();
 
-    // Find and delete WebLLM cache databases
-    for (const db of databases) {
-      if (db.name && db.name.includes('webllm')) {
+      // Find and delete WebLLM cache databases
+      for (const db of databases) {
+        if (db.name && db.name.includes('webllm')) {
+          await new Promise<void>((resolve, reject) => {
+            const request = indexedDB.deleteDatabase(db.name!);
+            request.onsuccess = () => resolve();
+            request.onerror = () => reject(request.error);
+            request.onblocked = () => {
+              console.warn(`Database ${db.name} is blocked, retrying...`);
+              // Still resolve as the database will be deleted when unblocked
+              resolve();
+            };
+          });
+        }
+      }
+    } else {
+      // Fallback for Safari: attempt to delete known WebLLM databases
+      const knownDatabases = ['webllm-model-cache', 'webllm', 'mlc-models'];
+      for (const dbName of knownDatabases) {
         await new Promise<void>((resolve, reject) => {
-          const request = indexedDB.deleteDatabase(db.name!);
+          const request = indexedDB.deleteDatabase(dbName);
           request.onsuccess = () => resolve();
-          request.onerror = () => reject(request.error);
+          request.onerror = () => {
+            // Ignore errors for databases that don't exist
+            resolve();
+          };
           request.onblocked = () => {
-            console.warn(`Database ${db.name} is blocked, retrying...`);
+            console.warn(`Database ${dbName} is blocked, retrying...`);
             // Still resolve as the database will be deleted when unblocked
             resolve();
           };
