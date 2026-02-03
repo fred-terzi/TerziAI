@@ -180,18 +180,20 @@ export async function loadMessages(): Promise<ChatMessage[]> {
 
       const messages = await new Promise<ChatMessage[]>((resolve, reject) => {
         request.onsuccess = () => {
-          // Convert ISO strings back to Date objects
-          const messages = request.result.map(
-            (msg: {
-              id: string;
-              role: 'user' | 'assistant' | 'system';
-              content: string;
-              timestamp: string;
-            }) => ({
-              ...msg,
-              timestamp: new Date(msg.timestamp),
-            })
-          );
+          // Convert ISO strings back to Date objects and sort by timestamp
+          const messages = request.result
+            .map(
+              (msg: {
+                id: string;
+                role: 'user' | 'assistant' | 'system';
+                content: string;
+                timestamp: string;
+              }) => ({
+                ...msg,
+                timestamp: new Date(msg.timestamp),
+              })
+            )
+            .sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
           resolve(messages);
         };
         request.onerror = () => reject(request.error);
