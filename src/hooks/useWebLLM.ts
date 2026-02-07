@@ -192,14 +192,40 @@ export function useWebLLM(config: Partial<ChatConfig> = {}) {
       // Dynamic import to avoid issues during testing/SSR
       const webllm = await import('@mlc-ai/web-llm');
 
-      const engine = await webllm.CreateMLCEngine(fullConfig.modelId, {
-        initProgressCallback: (progress: { text: string; progress: number }) => {
-          setLoadingProgress({
-            text: progress.text,
-            progress: Math.round(10 + progress.progress * 90),
-          });
-        },
-      });
+      // Custom appConfig for SmolLM2-135M-Instruct-q4f32_1-MLC
+      let engine;
+      if (fullConfig.modelId === 'SmolLM2-135M-Instruct-q4f32_1-MLC') {
+        const appConfig = {
+          model_list: [
+            {
+              model: 'https://huggingface.co',
+              model_id: 'SmolLM2-135M-Instruct-q4f32_1-MLC',
+              model_lib:
+                webllm.modelLibURLPrefix +
+                webllm.modelVersion +
+                '/SmolLM2-135M-Instruct-q4f32_1-ctx2k_cs1k-webgpu.wasm',
+            },
+          ],
+        };
+        engine = await webllm.CreateMLCEngine(fullConfig.modelId, {
+          appConfig,
+          initProgressCallback: (progress: { text: string; progress: number }) => {
+            setLoadingProgress({
+              text: progress.text,
+              progress: Math.round(10 + progress.progress * 90),
+            });
+          },
+        });
+      } else {
+        engine = await webllm.CreateMLCEngine(fullConfig.modelId, {
+          initProgressCallback: (progress: { text: string; progress: number }) => {
+            setLoadingProgress({
+              text: progress.text,
+              progress: Math.round(10 + progress.progress * 90),
+            });
+          },
+        });
+      }
 
       engineRef.current = engine;
       setStatus('ready');

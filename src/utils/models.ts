@@ -41,6 +41,15 @@ export interface ModelLoadError {
 export const AVAILABLE_MODELS: ModelInfo[] = [
   // F32 models (better compatibility, work without shader-f16 support)
   {
+    id: 'SmolLM2-135M-Instruct-q4f32_1-MLC',
+    name: 'Smol 117M (f32)',
+    size: 'small',
+    vramMB: 120,
+    description: 'Tiny "smol" model for testing and minimal resource use (f32, compatible)',
+    lowResource: true,
+    shaderType: 'f32',
+  },
+  {
     id: 'Llama-3.2-1B-Instruct-q4f32_1-MLC',
     name: 'Llama 3.2 1B (f32)',
     size: 'small',
